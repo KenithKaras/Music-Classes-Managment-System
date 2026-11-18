@@ -18,6 +18,7 @@ import { Button } from '../components/Button';
 import { CurrencyInput } from '../components/CurrencyInput';
 import { FileUpload } from '../components/FileUpload';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { useToast } from '../components/Toast';
 import { supabase } from '../lib/supabase';
 import {
   getAcademySettings,
@@ -33,10 +34,12 @@ import {
   formatPayeeName,
   buildUpiPayUri,
   generateUpiQrDataUrl,
+  dataUrlToBlob,
 } from '../utils/upiUtils';
 import type { AcademySettings } from '../types';
 
 export const SettingsPage: React.FC = () => {
+  const { toast } = useToast();
   const [settings, setSettings] = useState<AcademySettings | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -212,8 +215,7 @@ export const SettingsPage: React.FC = () => {
       const payee = formatPayeeName(upiPayeeName, academyName);
       const uri = buildUpiPayUri(upiId, payee);
       const dataUrl = await generateUpiQrDataUrl(uri);
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
+      const blob = dataUrlToBlob(dataUrl, 'image/png');
 
       if (upiQrPath) {
         setPendingQrPayload({ fileOrBlob: blob, preview: dataUrl });
@@ -222,8 +224,12 @@ export const SettingsPage: React.FC = () => {
         await executeUploadQr(blob, dataUrl);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to generate QR code.';
-      setErrorMsg(msg);
+      if (import.meta.env.DEV) {
+        console.error('QR code generation error:', err);
+      }
+      const failureNotice = 'Could not generate the QR code. Try uploading an image instead.';
+      setErrorMsg(failureNotice);
+      toast(failureNotice, 'error');
     } finally {
       setIsGeneratingQr(false);
     }
@@ -235,12 +241,27 @@ export const SettingsPage: React.FC = () => {
     try {
       const { path, url, error } = await uploadUpiQrCode(fileOrBlob);
       if (error || !path) {
-        setErrorMsg(error || 'Failed to upload QR code.');
+        const failureNotice = 'Could not generate the QR code. Try uploading an image instead.';
+        setErrorMsg(error || failureNotice);
+        toast(failureNotice, 'error');
       } else {
+        // Save upi_qr_path in academy_settings
+        const { error: updateError } = await updateAcademySettings({ upi_qr_path: path });
+        if (updateError && import.meta.env.DEV) {
+          console.error('Failed to save upi_qr_path to academy_settings:', updateError);
+        }
         setUpiQrPath(path);
         setQrPreviewUrl(url || preview);
-        setSuccessMsg('UPI QR code uploaded. Click "Save Settings" to apply.');
+        setSuccessMsg('UPI QR code generated and saved successfully.');
+        toast('UPI QR code generated and saved successfully.', 'success');
       }
+    } catch (err: unknown) {
+      if (import.meta.env.DEV) {
+        console.error('QR upload error:', err);
+      }
+      const failureNotice = 'Could not generate the QR code. Try uploading an image instead.';
+      setErrorMsg(failureNotice);
+      toast(failureNotice, 'error');
     } finally {
       setIsUploadingQr(false);
       setIsConfirmQrReplaceOpen(false);

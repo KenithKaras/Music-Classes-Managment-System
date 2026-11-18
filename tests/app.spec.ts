@@ -1203,4 +1203,64 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     await expect(page.locator('text=Option B: Generate QR from UPI ID')).toBeVisible();
     await expect(page.locator('img[alt="UPI QR Code"]')).not.toBeVisible();
   });
+
+  // ----------------------------------------------------------------------------
+  // 16. UPI QR GENERATION: NO CSP DATA URL FETCH VIOLATION
+  // ----------------------------------------------------------------------------
+  test('16. UPI QR Generation: generate QR from UPI ID, verify success message, QR preview, and assert zero CSP violations', async ({ page }) => {
+    const cspViolations: string[] = [];
+    page.on('console', (msg) => {
+      const text = msg.text();
+      if (text.includes('Content Security Policy') || text.includes('connect-src')) {
+        cspViolations.push(text);
+      }
+    });
+
+    await setupMockSessionAndRoutes(page, 'light');
+    await page.route('**/rest/v1/academy_settings**', async (route) => {
+      const method = route.request().method();
+      if (method === 'PATCH' || method === 'PUT') {
+        const patchData = route.request().postDataJSON() || {};
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ...MOCK_ACADEMY, ...patchData }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            ...MOCK_ACADEMY,
+            upi_id: 'academy@okhdfcbank',
+            upi_payee_name: 'MIX with Me Classes',
+            upi_qr_path: null,
+          },
+        ]),
+      });
+    });
+
+    await page.goto('/settings');
+    await expect(page.locator('h1', { hasText: 'Settings' })).toBeVisible();
+
+    // Verify Option B is visible
+    await expect(page.locator('text=Option B: Generate QR from UPI ID')).toBeVisible();
+
+    // Find and click "Generate QR from UPI ID" button
+    const generateBtn = page.getByRole('button', { name: 'Generate QR from UPI ID' });
+    await expect(generateBtn).toBeVisible();
+    await generateBtn.click();
+
+    // Expect success message
+    await expect(page.locator('text=/UPI QR code (generated and saved successfully|saved successfully)/i').first()).toBeVisible({ timeout: 10000 });
+
+    // Expect visible QR preview
+    const qrImg = page.locator('img[alt="UPI QR Code"]');
+    await expect(qrImg).toBeVisible();
+
+    // Assert zero CSP violations
+    expect(cspViolations).toEqual([]);
+  });
 });

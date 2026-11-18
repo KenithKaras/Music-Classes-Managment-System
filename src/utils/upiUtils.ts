@@ -61,6 +61,30 @@ export async function generateUpiQrDataUrl(upiUri: string): Promise<string> {
 }
 
 /**
+ * Converts a base64 data URL (e.g. data:image/png;base64,iVBORw0KGgo...)
+ * directly to a Blob without using window.fetch, avoiding CSP connect-src violations.
+ */
+export function dataUrlToBlob(dataUrl: string, fallbackMime = 'image/png'): Blob {
+  const commaIndex = dataUrl.indexOf(',');
+  let mimeType = fallbackMime;
+  if (commaIndex !== -1) {
+    const header = dataUrl.slice(0, commaIndex);
+    const match = header.match(/data:([^;]+)/);
+    if (match && match[1]) {
+      mimeType = match[1];
+    }
+  }
+  const base64Data = commaIndex !== -1 ? dataUrl.slice(commaIndex + 1) : dataUrl;
+  const binaryString = atob(base64Data);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mimeType });
+}
+
+/**
  * Validates a UPI Transaction ID / UTR number.
  * Rule: 6 to 35 alphanumeric characters, stored in uppercase.
  */

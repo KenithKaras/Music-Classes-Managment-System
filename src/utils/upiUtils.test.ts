@@ -5,6 +5,7 @@ import {
   formatPayeeName,
   buildUpiPayUri,
   generateUpiQrDataUrl,
+  dataUrlToBlob,
   cleanIndianPhoneNumber,
   buildPaymentRequestWhatsAppUrl,
 } from './upiUtils';
@@ -167,6 +168,40 @@ describe('UPI Utils - Validators, Encoders & Business Logic', () => {
       expect(res.message).toContain('academy@okhdfcbank');
       expect(res.message).toContain('5 Nov 2026');
       expect(res.message).toContain('MIX with Me Classes');
+    });
+  });
+
+  describe('dataUrlToBlob - Direct In-Memory Base64 to Blob Converter (No CSP connect-src violation)', () => {
+    it('returns a Blob with the correct mime type and byte length from a standard data URL', () => {
+      // 5 bytes: 'hello' encoded in base64 is 'aGVsbG8='
+      const dataUrl = 'data:image/png;base64,aGVsbG8=';
+      const blob = dataUrlToBlob(dataUrl);
+
+      expect(blob).toBeInstanceOf(Blob);
+      expect(blob.type).toBe('image/png');
+      expect(blob.size).toBe(5);
+    });
+
+    it('correctly handles actual QR code data URLs without network fetch', async () => {
+      const uri = 'upi://pay?pa=test@okaxis&pn=Test&cu=INR';
+      const qrDataUrl = await generateUpiQrDataUrl(uri);
+      const blob = dataUrlToBlob(qrDataUrl);
+
+      expect(blob).toBeInstanceOf(Blob);
+      expect(blob.type).toBe('image/png');
+      expect(blob.size).toBeGreaterThan(100);
+    });
+
+    it('extracts custom mime type from header and falls back if missing', () => {
+      const jpegDataUrl = 'data:image/jpeg;base64,dGVzdA=='; // 4 bytes: 'test'
+      const blobJpeg = dataUrlToBlob(jpegDataUrl);
+      expect(blobJpeg.type).toBe('image/jpeg');
+      expect(blobJpeg.size).toBe(4);
+
+      const rawBase64 = 'dGVzdA==';
+      const blobRaw = dataUrlToBlob(rawBase64, 'image/png');
+      expect(blobRaw.type).toBe('image/png');
+      expect(blobRaw.size).toBe(4);
     });
   });
 });
