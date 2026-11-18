@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --surface: #ffffff;
+    --surface-raised: #f8fafc;
+    --card-border: #e2e8f0;
+    --input-bg: #ffffff;
+    --input-border: #cbd5e1;
+    --input-text: #0f172a;
+    --input-placeholder: #64748b;
+    --text-primary: #0f172a;
+    --text-muted: #64748b;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --focus-ring: #4f46e5;
+  }
+
+  .dark {
+    --surface: #111a2b;
+    --surface-raised: #1e293b;
+    --card-border: #1f2a3d;
+    --input-bg: #1e293b;
+    --input-border: #334155;
+    --input-text: #f1f5f9;
+    --input-placeholder: #94a3b8;
+    --text-primary: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --focus-ring: #818cf8;
+  }
+
+  html {
+    color-scheme: light dark;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html, body, #root {
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    max-width: 100vw;
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html.dark, html.dark body, html.dark #root {
+    background-color: #0b1220;
+    color: #f1f5f9;
+  }
+
+  /* Large enough touch targets & inputs */
+  button, input, select, textarea, a {
+    font-family: inherit;
+    touch-action: manipulation;
+  }
+
+  /* Clean keyboard focus ring (visible only on :focus-visible) */
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Prevent browser autofill from making inputs gray with light unreadable text */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: var(--input-text) !important;
+    -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}
+
+/* Remove default scrollbar arrows and scrollbars where applied */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
