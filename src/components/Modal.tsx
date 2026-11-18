@@ -58,20 +58,20 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Container: Fullscreen on mobile, centered modal dialog on tablet/desktop */}
       <div className="flex min-h-full items-stretch sm:items-center justify-center p-0 sm:p-6 text-center">
         <div
-          className={`relative transform overflow-hidden rounded-none sm:rounded-2xl bg-white dark:bg-[#111a2b] text-left shadow-2xl transition-all w-full h-full sm:h-auto min-h-screen sm:min-h-0 ${maxWidthStyles[maxWidth]} border-0 sm:border border-slate-200 dark:border-[#1f2a3d] flex flex-col`}
+          className={`relative transform overflow-hidden rounded-none sm:rounded-2xl bg-white dark:bg-[#131c2e] text-left shadow-xl transition-all w-full h-full sm:h-auto min-h-screen sm:min-h-0 ${maxWidthStyles[maxWidth]} border-0 sm:border border-slate-200 dark:border-[#26324a] flex flex-col`}
         >
           {/* Header */}
-          <div className="flex items-start justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="flex items-start justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-slate-100 dark:border-[#26324a] shrink-0">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white" id="modal-title">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-[#f1f5f9]" id="modal-title">
                 {title}
               </h3>
-              {description && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{description}</p>}
+              {description && <p className="mt-1 text-xs text-slate-500 dark:text-[#a9b4c7]">{description}</p>}
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 -mr-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="p-2 -mr-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#1a2540] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Close dialog"
             >
               <X className="w-5 h-5" />

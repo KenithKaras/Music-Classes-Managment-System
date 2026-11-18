@@ -13,7 +13,7 @@ export const SchemaErrorScreen: React.FC<SchemaErrorScreenProps> = ({
 }) => {
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 antialiased font-sans text-slate-100">
-      <div className="max-w-2xl w-full bg-[#111A2B] rounded-2xl shadow-2xl border border-rose-500/30 p-6 sm:p-8 space-y-6">
+      <div className="max-w-2xl w-full bg-[#131c2e] rounded-2xl shadow-2xl border border-rose-500/30 p-6 sm:p-8 space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
             <AlertTriangle className="w-6 h-6" />

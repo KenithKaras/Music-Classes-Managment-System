@@ -162,9 +162,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        if (import.meta.env.DEV) {
-          console.error('[Supabase Auth Error]:', error);
-        }
         return { error: mapAuthError(error.message) };
       }
 
@@ -176,9 +173,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { error: null };
     } catch (err: unknown) {
-      if (import.meta.env.DEV) {
-        console.error('[Supabase Auth Unexpected Exception]:', err);
-      }
       const message = err instanceof Error ? err.message : 'An unexpected error occurred during sign in.';
       return { error: mapAuthError(message) };
     }

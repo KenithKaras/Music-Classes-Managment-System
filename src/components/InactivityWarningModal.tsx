@@ -36,7 +36,7 @@ export const InactivityWarningModal: React.FC = () => {
       aria-labelledby="inactivity-warning-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
     >
-      <div className="w-full max-w-md bg-white dark:bg-[#111A2B] border border-amber-300 dark:border-amber-700/60 rounded-3xl p-6 shadow-2xl space-y-4">
+      <div className="w-full max-w-md bg-white dark:bg-[#131c2e] border border-amber-300 dark:border-amber-700/60 rounded-3xl p-6 shadow-2xl space-y-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
             <Clock className="w-6 h-6 animate-pulse" />

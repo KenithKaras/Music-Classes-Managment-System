@@ -259,7 +259,7 @@ export const AttendancePage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header and Two Tabs */}
-      <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-5 sm:p-6 shadow-xs">
+      <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-5 sm:p-6 shadow-xs">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             Attendance Management
@@ -304,16 +304,16 @@ export const AttendancePage: React.FC = () => {
                 {needsAttentionList.map((st) => (
                   <div
                     key={`${st.student_id}-${st.batch_id}`}
-                    className="p-3 rounded-xl bg-white dark:bg-[#111A2B] border border-rose-200 dark:border-rose-900/50 shadow-2xs flex items-center justify-between gap-3"
+                    className="p-3 rounded-xl bg-white dark:bg-[#131c2e] border border-rose-200 dark:border-rose-900/50 shadow-2xs flex items-center justify-between gap-3"
                   >
                     <div className="min-w-0">
                       <p className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
                         {st.student_name}
                       </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                         {st.batch_name}
                       </p>
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">
+                      <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-bold bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200">
                         {st.consecutive_absences} classes missed
                       </span>
                     </div>
@@ -335,7 +335,7 @@ export const AttendancePage: React.FC = () => {
           )}
 
           {/* Date Picker & Batch Filter Card */}
-          <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
+          <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               {/* Date Navigation & Native Picker */}
               <div className="flex flex-wrap items-center gap-2">
@@ -420,7 +420,7 @@ export const AttendancePage: React.FC = () => {
 
           {/* Classes List */}
           {loadingDateClasses ? (
-            <div className="py-12 bg-white dark:bg-[#111A2B] rounded-2xl border border-slate-200 dark:border-[#1F2A3D] text-center">
+            <div className="py-12 bg-white dark:bg-[#131c2e] rounded-2xl border border-slate-200 dark:border-[#26324a] text-center">
               <div className="w-6 h-6 border-2 border-slate-300 dark:border-slate-700 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin mx-auto mb-2" />
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Loading classes...</p>
             </div>
@@ -450,8 +450,8 @@ export const AttendancePage: React.FC = () => {
                       isCancelled
                         ? 'bg-slate-100 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 opacity-60'
                         : isExpanded
-                        ? 'bg-white dark:bg-[#111A2B] border-indigo-400 dark:border-indigo-600/60 shadow-md ring-1 ring-indigo-500/20'
-                        : 'bg-white dark:bg-[#111A2B] border-slate-200 dark:border-[#1F2A3D] hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
+                        ? 'bg-white dark:bg-[#131c2e] border-indigo-400 dark:border-indigo-600/60 shadow-md ring-1 ring-indigo-500/20'
+                        : 'bg-white dark:bg-[#131c2e] border-slate-200 dark:border-[#26324a] hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
                     }`}
                   >
                     {/* Class Card Header / Toggle Button */}
@@ -509,20 +509,20 @@ export const AttendancePage: React.FC = () => {
 
                     {/* Inline Expanded Student Roster */}
                     {isExpanded && !isCancelled && (
-                      <div className="border-t border-slate-100 dark:border-slate-800 p-4 sm:p-5 bg-slate-50/50 dark:bg-slate-950/30 rounded-b-2xl space-y-4">
+                      <div className="border-t border-slate-100 dark:border-[#26324a] p-4 sm:p-5 bg-slate-50/50 dark:bg-[#1a2540]/40 rounded-b-2xl space-y-4">
                         {isLoadingRoster ? (
-                          <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
-                            <div className="w-5 h-5 border-2 border-slate-300 dark:border-slate-700 border-t-indigo-600 rounded-full animate-spin mx-auto mb-2" />
+                          <div className="py-8 text-center text-xs text-slate-500 dark:text-[#a9b4c7]">
+                            <div className="w-5 h-5 border-2 border-slate-300 dark:border-[#26324a] border-t-indigo-600 rounded-full animate-spin mx-auto mb-2" />
                             Loading batch students...
                           </div>
                         ) : roster.length === 0 ? (
-                          <p className="py-6 text-center text-xs text-slate-400 italic">
+                          <p className="py-6 text-center text-xs text-slate-400 dark:text-[#a9b4c7] italic">
                             No active students enrolled in this batch on or before this class date.
                           </p>
                         ) : (
                           <div className="space-y-4">
                             {/* Top Stats Bar & Auto-Save Indicator */}
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-[#26324a]">
                               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
                                 <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
                                   Present: {presentCount}
@@ -567,7 +567,7 @@ export const AttendancePage: React.FC = () => {
                                 return (
                                   <div
                                     key={st.id}
-                                    className="p-3 rounded-xl bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                                    className="p-3 rounded-xl bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                                   >
                                     <div className="flex items-center gap-3 min-w-0">
                                       <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
@@ -585,7 +585,7 @@ export const AttendancePage: React.FC = () => {
                                         <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate">
                                           {st.full_name}
                                         </p>
-                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                                           Enrolled: {formatDisplayDate(st.enrollment_date)}
                                         </p>
                                       </div>
@@ -643,7 +643,7 @@ export const AttendancePage: React.FC = () => {
       {activeTab === 'reports' && (
         <div className="space-y-6">
           {/* Controls Card */}
-          <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+          <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
@@ -741,7 +741,7 @@ export const AttendancePage: React.FC = () => {
 
           {/* Report Summary Table */}
           {loadingMonthly ? (
-            <div className="py-12 bg-white dark:bg-[#111A2B] rounded-2xl border border-slate-200 dark:border-[#1F2A3D] text-center">
+            <div className="py-12 bg-white dark:bg-[#131c2e] rounded-2xl border border-slate-200 dark:border-[#26324a] text-center">
               <div className="w-6 h-6 border-2 border-slate-300 dark:border-slate-700 border-t-indigo-600 rounded-full animate-spin mx-auto mb-2" />
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Generating monthly report...</p>
             </div>
@@ -752,9 +752,9 @@ export const AttendancePage: React.FC = () => {
               description="No classes or attendance were recorded for this batch in the selected month."
             />
           ) : (
-            <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl shadow-xs overflow-hidden">
+            <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl shadow-xs overflow-hidden">
               <Table>
-                <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-[#1F2A3D]">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-[#26324a]">
                   <tr>
                     <th scope="col" className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">
                       Student Name

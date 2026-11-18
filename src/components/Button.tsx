@@ -28,15 +28,15 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variantStyles = {
     primary:
-      'bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 shadow-xs border border-transparent',
+      'bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 shadow-xs border border-transparent',
     secondary:
-      'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 shadow-2xs',
+      'bg-white dark:bg-[#131c2e] text-slate-700 dark:text-[#f1f5f9] hover:bg-slate-50 dark:hover:bg-[#1a2540] border border-slate-300 dark:border-[#26324a] shadow-2xs',
     danger:
       'bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-600 shadow-xs border border-transparent',
     ghost:
-      'bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent',
+      'bg-transparent text-slate-700 dark:text-[#a9b4c7] hover:bg-slate-100 dark:hover:bg-[#1a2540] hover:text-slate-900 dark:hover:text-[#f1f5f9] border border-transparent',
     outline:
-      'bg-transparent text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700',
+      'bg-transparent text-slate-900 dark:text-[#f1f5f9] hover:bg-slate-100 dark:hover:bg-[#1a2540] border border-slate-300 dark:border-[#26324a]',
   };
 
   return (

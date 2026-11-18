@@ -1,4 +1,15 @@
 import { jsPDF } from 'jspdf';
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  AlignmentType,
+} from 'docx';
 import type { Payment, AcademySettings } from '../types';
 import { formatIndianCurrency, formatBillingMonth } from './feeUtils';
 
@@ -140,7 +151,11 @@ export function generateReceiptPdf(params: GenerateReceiptPdfParams): jsPDF {
   doc.text('Payment Mode:', rightColX, currentY);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(17, 24, 39);
-  doc.text(payment.method.toUpperCase().replace('_', ' '), rightColX + 24, currentY);
+  const methodLabel =
+    payment.method === 'upi' && payment.upi_txn_id
+      ? `UPI (UTR: ${payment.upi_txn_id})`
+      : payment.method.toUpperCase().replace('_', ' ');
+  doc.text(methodLabel, rightColX + 24, currentY);
 
   currentY += 6.5;
 
@@ -232,7 +247,7 @@ export function generateReceiptPdf(params: GenerateReceiptPdfParams): jsPDF {
     doc.setTextColor(16, 149, 102); // Green 600
   }
   doc.text(
-    balanceRemaining > 0 ? formatIndianCurrency(balanceRemaining) : '₹0 (Paid in Full)',
+    balanceRemaining > 0 ? formatIndianCurrency(balanceRemaining) : '₹0 (PAID IN FULL)',
     pageWidth - margin - 4,
     rowY + 5.2,
     { align: 'right' }
@@ -297,6 +312,133 @@ export async function downloadReceiptPdf(params: GenerateReceiptPdfParams): Prom
     logoBase64,
   });
 
-  const filename = `Receipt-${params.payment.receipt_number}.pdf`;
+  const filename = `MIX-Receipt-${params.payment.receipt_number}.pdf`;
   doc.save(filename);
+}
+
+/**
+ * Generates and downloads the official receipt as a Word document (.docx).
+ * Filename: MIX-Receipt-[receipt_number].docx
+ */
+export async function downloadReceiptDocx(params: GenerateReceiptPdfParams): Promise<void> {
+  const { payment, academySettings, balanceRemaining = 0 } = params;
+  const academyName = academySettings?.academy_name || 'MIX with Me Classes';
+  const methodLabel =
+    payment.method === 'upi' && payment.upi_txn_id
+      ? `UPI (UTR: ${payment.upi_txn_id})`
+      : payment.method.toUpperCase().replace('_', ' ');
+
+  const billingMonthStr = payment.monthly_fee?.billing_month
+    ? formatBillingMonth(payment.monthly_fee.billing_month)
+    : 'Music Class Fee';
+
+  const statusLabel = balanceRemaining <= 0 ? 'PAID IN FULL' : 'PARTIALLY PAID';
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: [
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({ text: academyName, bold: true, size: 32, color: '0F172A' }),
+            ],
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({
+                text: `${academySettings?.contact_number ? 'Ph: ' + academySettings.contact_number + ' | ' : ''}${academySettings?.email || ''}`,
+                size: 18,
+                color: '64748B',
+              }),
+            ],
+          }),
+          new Paragraph({ text: '' }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({ text: 'OFFICIAL FEE RECEIPT', bold: true, size: 24, color: '4338CA' }),
+            ],
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({ text: `Receipt No: ${payment.receipt_number}`, bold: true, size: 20, color: '334155' }),
+            ],
+          }),
+          new Paragraph({ text: '' }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Student Name', bold: true })] })] }),
+                  new TableCell({ children: [new Paragraph(payment.student?.full_name || 'N/A')] }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Payment Date', bold: true })] })] }),
+                  new TableCell({ children: [new Paragraph(payment.payment_date)] }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Billing Month', bold: true })] })] }),
+                  new TableCell({ children: [new Paragraph(billingMonthStr)] }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Payment Method', bold: true })] })] }),
+                  new TableCell({ children: [new Paragraph(methodLabel)] }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Amount Paid', bold: true })] })] }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: formatIndianCurrency(payment.amount), bold: true, color: '4338CA' })] })] }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Balance Remaining', bold: true })] })] }),
+                  new TableCell({ children: [new Paragraph(balanceRemaining > 0 ? formatIndianCurrency(balanceRemaining) : '₹0')] }),
+                ],
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Status', bold: true })] })] }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: statusLabel, bold: true, color: balanceRemaining <= 0 ? '059669' : 'D97706' })] })] }),
+                ],
+              }),
+            ],
+          }),
+          new Paragraph({ text: '' }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'This is a computer-generated receipt. MIX with Me Classes.',
+                italics: true,
+                size: 16,
+                color: '94A3B8',
+              }),
+            ],
+          }),
+        ],
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `MIX-Receipt-${payment.receipt_number}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

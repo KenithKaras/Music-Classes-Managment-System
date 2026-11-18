@@ -14,6 +14,7 @@ import {
   RefreshCw,
   CheckCircle2,
   Sparkles,
+  QrCode,
 } from 'lucide-react';
 import {
   BarChart,
@@ -34,6 +35,7 @@ import { EmptyState } from '../components/EmptyState';
 import { RecordPaymentModal } from '../components/RecordPaymentModal';
 import { ReceiptModal } from '../components/ReceiptModal';
 import { WhatsAppReminderModal } from '../components/WhatsAppReminderModal';
+import { PaymentRequestModal } from '../components/PaymentRequestModal';
 import { useTheme } from '../hooks/useTheme';
 import type {
   MonthlyFee,
@@ -104,6 +106,7 @@ export const FeesPage: React.FC = () => {
   const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<Payment | null>(null);
   const [receiptBalanceRemaining, setReceiptBalanceRemaining] = useState<number>(0);
   const [reminderFee, setReminderFee] = useState<MonthlyFee | null>(null);
+  const [paymentRequestFee, setPaymentRequestFee] = useState<MonthlyFee | null>(null);
 
   // Load batches on mount
   useEffect(() => {
@@ -310,7 +313,7 @@ export const FeesPage: React.FC = () => {
       {activeTab === 'monthly' && (
         <div className="space-y-6">
           {/* Month Selector Bar & Generate Button */}
-          <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl p-4 shadow-xs flex flex-col lg:flex-row items-center justify-between gap-4">
+          <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 shadow-xs flex flex-col lg:flex-row items-center justify-between gap-4">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 w-full lg:w-auto">
               <div className="flex items-center gap-1 sm:gap-2">
                 <Button
@@ -379,7 +382,7 @@ export const FeesPage: React.FC = () => {
           {/* Summary Stat Cards */}
           {financialSummary && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl p-4 sm:p-5 shadow-xs">
+              <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 sm:p-5 shadow-xs">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Total Expected
                 </p>
@@ -391,7 +394,7 @@ export const FeesPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl p-4 sm:p-5 shadow-xs">
+              <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 sm:p-5 shadow-xs">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Total Collected
                 </p>
@@ -403,7 +406,7 @@ export const FeesPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl p-4 sm:p-5 shadow-xs">
+              <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 sm:p-5 shadow-xs">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Total Pending
                 </p>
@@ -415,7 +418,7 @@ export const FeesPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl p-4 sm:p-5 shadow-xs">
+              <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 sm:p-5 shadow-xs">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Collection Rate
                 </p>
@@ -454,7 +457,7 @@ export const FeesPage: React.FC = () => {
           )}
 
           {/* Filters Bar */}
-          <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl p-4 shadow-xs flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+          <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 shadow-xs flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full lg:w-auto flex-1">
               {/* Search */}
               <div className="relative flex-1 min-w-0 sm:min-w-[180px]">
@@ -509,7 +512,7 @@ export const FeesPage: React.FC = () => {
 
           {/* Fees Table / Cards */}
           {loadingFees ? (
-            <div className="text-center py-16 bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl">
+            <div className="text-center py-16 bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl">
               <RefreshCw className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-3" />
               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Loading monthly fees...</p>
             </div>
@@ -522,12 +525,12 @@ export const FeesPage: React.FC = () => {
               onAction={handleGenerateFees}
             />
           ) : (
-            <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl shadow-xs overflow-hidden">
+            <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl shadow-xs overflow-hidden">
               {/* Desktop Table View */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                    <tr className="bg-slate-50 dark:bg-[#1a2540] border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       <th className="px-6 py-3.5">Student</th>
                       <th className="px-6 py-3.5">Batch</th>
                       <th className="px-6 py-3.5">Fee Amount</th>
@@ -606,6 +609,17 @@ export const FeesPage: React.FC = () => {
                               </Button>
                             )}
 
+                            {(fee.balance ?? (fee.amount_due - (fee.amount_paid || 0))) > 0 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setPaymentRequestFee(fee)}
+                                icon={QrCode}
+                              >
+                                Send payment request
+                              </Button>
+                            )}
+
                             {fee.payments && fee.payments.length > 0 && (
                               <Button
                                 size="sm"
@@ -644,7 +658,7 @@ export const FeesPage: React.FC = () => {
               {/* Mobile Card-Based View */}
               <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
                 {monthlyFees.map((fee) => (
-                  <div key={fee.id} className="p-4 space-y-3 bg-white dark:bg-[#111a2b]">
+                  <div key={fee.id} className="p-4 space-y-3 bg-white dark:bg-[#131c2e]">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5">
                         {fee.student?.photo_url ? (
@@ -701,6 +715,16 @@ export const FeesPage: React.FC = () => {
                           Pay
                         </Button>
                       )}
+                      {(fee.balance ?? (fee.amount_due - (fee.amount_paid || 0))) > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setPaymentRequestFee(fee)}
+                          icon={QrCode}
+                        >
+                          Send payment request
+                        </Button>
+                      )}
                       {fee.payments && fee.payments.length > 0 && (
                         <Button
                           size="sm"
@@ -741,7 +765,7 @@ export const FeesPage: React.FC = () => {
          ============================================================================== */}
       {activeTab === 'overdue' && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl p-4 shadow-xs flex items-center justify-between">
+          <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 shadow-xs flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
@@ -763,7 +787,7 @@ export const FeesPage: React.FC = () => {
           </div>
 
           {loadingOverdue ? (
-            <div className="text-center py-16 bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl">
+            <div className="text-center py-16 bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl">
               <RefreshCw className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-3" />
               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Checking overdue records...</p>
             </div>
@@ -774,12 +798,12 @@ export const FeesPage: React.FC = () => {
               description="There are currently no overdue payments across any student batch."
             />
           ) : (
-            <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl shadow-xs overflow-hidden">
+            <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl shadow-xs overflow-hidden">
               {/* Desktop View */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                    <tr className="bg-slate-50 dark:bg-[#1a2540] border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       <th className="px-6 py-3.5">Student</th>
                       <th className="px-6 py-3.5">Batch</th>
                       <th className="px-6 py-3.5">Billing Month</th>
@@ -820,6 +844,14 @@ export const FeesPage: React.FC = () => {
                               icon={PlusCircle}
                             >
                               Record Payment
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setPaymentRequestFee(fee)}
+                              icon={QrCode}
+                            >
+                              Send payment request
                             </Button>
                             <Button
                               size="sm"
@@ -873,6 +905,14 @@ export const FeesPage: React.FC = () => {
                       </Button>
                       <Button
                         size="sm"
+                        variant="outline"
+                        onClick={() => setPaymentRequestFee(fee)}
+                        icon={QrCode}
+                      >
+                        Send payment request
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="secondary"
                         onClick={() => setReminderFee(fee)}
                         icon={MessageSquare}
@@ -894,7 +934,7 @@ export const FeesPage: React.FC = () => {
       {activeTab === 'history' && (
         <div className="space-y-6">
           {/* History Filters Bar */}
-          <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl p-4 shadow-xs space-y-3">
+          <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 shadow-xs space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-end">
               {/* Search */}
               <div className="relative">
@@ -973,7 +1013,7 @@ export const FeesPage: React.FC = () => {
 
           {/* Payments Table */}
           {loadingHistory ? (
-            <div className="text-center py-16 bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl">
+            <div className="text-center py-16 bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl">
               <RefreshCw className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-3" />
               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Loading payment transactions...</p>
             </div>
@@ -984,11 +1024,11 @@ export const FeesPage: React.FC = () => {
               description="No payments match the specified search or filter criteria."
             />
           ) : (
-            <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl shadow-xs overflow-hidden">
+            <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl shadow-xs overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                    <tr className="bg-slate-50 dark:bg-[#1a2540] border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       <th className="px-6 py-3.5">Receipt #</th>
                       <th className="px-6 py-3.5">Date</th>
                       <th className="px-6 py-3.5">Student</th>
@@ -1055,7 +1095,7 @@ export const FeesPage: React.FC = () => {
       {activeTab === 'analytics' && (
         <div className="space-y-6">
           {/* Header */}
-          <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl p-4 shadow-xs flex items-center justify-between">
+          <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 shadow-xs flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -1077,14 +1117,14 @@ export const FeesPage: React.FC = () => {
           </div>
 
           {loadingAnalytics ? (
-            <div className="text-center py-16 bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl">
+            <div className="text-center py-16 bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl">
               <RefreshCw className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-3" />
               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Generating financial reports...</p>
             </div>
           ) : (
             <div className="space-y-6">
               {/* Recharts Bar Chart Card (Last 6 Months Comparison) */}
-              <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl p-6 shadow-xs">
+              <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-6 shadow-xs">
                 <div className="mb-4">
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">
                     Monthly Revenue: Expected vs Collected (Last 6 Months)
@@ -1100,18 +1140,18 @@ export const FeesPage: React.FC = () => {
                       data={incomeReportData.slice(-6)}
                       margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#1F2A3D' : '#E2E8F0'} />
-                      <XAxis dataKey="monthStr" tick={{ fontSize: 12, fill: isDark ? '#94A3B8' : '#64748B' }} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#26324a' : '#E2E8F0'} />
+                      <XAxis dataKey="monthStr" tick={{ fontSize: 12, fill: isDark ? '#a9b4c7' : '#64748B' }} />
                       <YAxis
-                        tick={{ fontSize: 12, fill: isDark ? '#94A3B8' : '#64748B' }}
+                        tick={{ fontSize: 12, fill: isDark ? '#a9b4c7' : '#64748B' }}
                         tickFormatter={(value) => `₹${value / 1000}k`}
                       />
                       <Tooltip
                         formatter={(value: any) => [formatIndianCurrency(Number(value)), '']}
                         labelStyle={{ fontWeight: 'bold', color: isDark ? '#F1F5F9' : '#1E293B' }}
                         contentStyle={{
-                          backgroundColor: isDark ? '#111A2B' : '#FFFFFF',
-                          borderColor: isDark ? '#1F2A3D' : '#E2E8F0',
+                          backgroundColor: isDark ? '#131c2e' : '#FFFFFF',
+                          borderColor: isDark ? '#26324a' : '#E2E8F0',
                           borderRadius: '12px',
                           color: isDark ? '#F1F5F9' : '#1E293B',
                           boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
@@ -1121,13 +1161,13 @@ export const FeesPage: React.FC = () => {
                       <Bar
                         dataKey="expected"
                         name="Total Expected"
-                        fill={isDark ? '#475569' : '#94A3B8'}
+                        fill={isDark ? '#475569' : '#a9b4c7'}
                         radius={[4, 4, 0, 0]}
                       />
                       <Bar
                         dataKey="collected"
                         name="Total Collected"
-                        fill={isDark ? '#38BDF8' : '#4F46E5'}
+                        fill={isDark ? '#818cf8' : '#4F46E5'}
                         radius={[4, 4, 0, 0]}
                       />
                     </BarChart>
@@ -1136,8 +1176,8 @@ export const FeesPage: React.FC = () => {
               </div>
 
               {/* 12-Month Detailed Breakdown Table */}
-              <div className="bg-white dark:bg-[#111a2b] border border-slate-200 dark:border-[#1f2a3d] rounded-2xl shadow-xs overflow-hidden">
-                <div className="p-4 border-b border-slate-200 dark:border-[#1f2a3d] bg-slate-50/70 dark:bg-slate-900/40">
+              <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl shadow-xs overflow-hidden">
+                <div className="p-4 border-b border-slate-200 dark:border-[#26324a] bg-slate-50/70 dark:bg-[#1a2540]">
                   <h3 className="text-sm font-bold text-slate-900">
                     12-Month Financial Summary Table
                   </h3>
@@ -1217,6 +1257,13 @@ export const FeesPage: React.FC = () => {
         isOpen={!!reminderFee}
         onClose={() => setReminderFee(null)}
         fee={reminderFee}
+      />
+
+      {/* 4. Payment Request Modal */}
+      <PaymentRequestModal
+        isOpen={!!paymentRequestFee}
+        onClose={() => setPaymentRequestFee(null)}
+        fee={paymentRequestFee}
       />
     </div>
   );

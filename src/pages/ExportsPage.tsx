@@ -122,7 +122,7 @@ export const ExportsPage: React.FC = () => {
       {/* Report Cards Grid */}
       <div className="space-y-5">
         {/* 1. Student Directory */}
-        <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -160,7 +160,7 @@ export const ExportsPage: React.FC = () => {
         </div>
 
         {/* 2. Payment Ledger */}
-        <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -230,7 +230,7 @@ export const ExportsPage: React.FC = () => {
         </div>
 
         {/* 3. Batch Attendance Report */}
-        <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -329,7 +329,7 @@ export const ExportsPage: React.FC = () => {
         </div>
 
         {/* 4. 12-Month Revenue Breakdown */}
-        <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -390,7 +390,7 @@ export const ExportsPage: React.FC = () => {
         </div>
 
         {/* 5. 12-Month Income Statement */}
-        <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -428,7 +428,7 @@ export const ExportsPage: React.FC = () => {
         </div>
 
         {/* 6. Outstanding Student Dues */}
-        <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />

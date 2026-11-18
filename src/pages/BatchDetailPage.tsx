@@ -94,7 +94,7 @@ export const BatchDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-12 text-center">
+      <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-12 text-center">
         <div className="w-8 h-8 border-3 border-slate-200 dark:border-slate-700 border-t-indigo-600 rounded-full animate-spin mx-auto mb-3" />
         <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Loading batch details...</p>
       </div>
@@ -112,7 +112,7 @@ export const BatchDetailPage: React.FC = () => {
         >
           Back to Batches
         </Button>
-        <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-8 text-center">
+        <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-8 text-center">
           <p className="text-red-600 dark:text-red-400 font-semibold mb-2">Batch Not Found</p>
           <p className="text-sm text-slate-500 dark:text-slate-400">{error || 'This batch does not exist.'}</p>
         </div>
@@ -160,7 +160,7 @@ export const BatchDetailPage: React.FC = () => {
       </div>
 
       {/* Batch Overview Header Card */}
-      <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-6 shadow-xs">
+      <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5">
@@ -186,7 +186,7 @@ export const BatchDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-left sm:text-right shrink-0">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] text-left sm:text-right shrink-0">
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium block">Enrolled Students</span>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
               {students.length}
@@ -227,7 +227,7 @@ export const BatchDetailPage: React.FC = () => {
             {/* Desktop Table View */}
             <div className="hidden md:block">
               <Table>
-                <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <thead className="bg-slate-50 dark:bg-[#1a2540] text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   <tr>
                     <th scope="col" className="px-6 py-3.5">Student</th>
                     <th scope="col" className="px-6 py-3.5">Phone</th>
@@ -236,7 +236,7 @@ export const BatchDetailPage: React.FC = () => {
                     <th scope="col" className="px-6 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-[#111A2B]">
+                <tbody className="divide-y divide-slate-200 dark:divide-[#26324a] bg-white dark:bg-[#131c2e]">
                   {students.map((student) => (
                     <tr key={student.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -315,7 +315,7 @@ export const BatchDetailPage: React.FC = () => {
               {students.map((student) => (
                 <div
                   key={student.id}
-                  className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-4 shadow-2xs space-y-3"
+                  className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-4 shadow-2xs space-y-3"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
@@ -350,7 +350,7 @@ export const BatchDetailPage: React.FC = () => {
                     </Badge>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                  <div className="pt-2 border-t border-slate-100 dark:border-[#26324a] flex items-center justify-between gap-2">
                     <Button
                       type="button"
                       variant="secondary"

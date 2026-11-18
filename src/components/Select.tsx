@@ -44,7 +44,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                 key={opt.value}
                 value={opt.value}
                 disabled={opt.disabled}
-                className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 py-1.5"
+                className="bg-white dark:bg-[#131c2e] text-slate-900 dark:text-[#f1f5f9] py-1.5"
               >
                 {opt.label}
               </option>

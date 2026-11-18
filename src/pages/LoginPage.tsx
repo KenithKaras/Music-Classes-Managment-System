@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
-import { Lock, Mail, AlertCircle, Music2, Info, ArrowRight, Clock, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Music2, Info, ArrowRight, Clock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Button } from '../components/Button';
 
@@ -19,7 +19,7 @@ export const LoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect if already authenticated
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
   if (user) {
     return <Navigate to={from} replace />;
   }
@@ -63,33 +63,44 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 px-4 transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-[#f1f5f9] flex flex-col justify-center py-12 sm:px-6 lg:px-8 px-4 transition-colors">
+      {/* Top Bar Navigation */}
+      <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-slate-600 dark:text-[#a9b4c7] hover:text-indigo-600 dark:hover:text-[#f1f5f9] transition-colors p-2 rounded-lg"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to home</span>
+        </Link>
+      </div>
+
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
         <ThemeToggle />
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 15 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         className="sm:mx-auto sm:w-full sm:max-w-md text-center"
       >
         <Link
-          to={user ? '/dashboard' : '/'}
-          aria-label={user ? 'Go to dashboard' : 'Go to home'}
+          to="/"
+          aria-label="Go to home"
           className="inline-flex items-center gap-2.5 group"
         >
-          <div className="w-11 h-11 rounded-2xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-600/20 group-hover:scale-105 transition-transform">
-            <Music2 className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white shadow-sm">
+            <Music2 className="w-5 h-5" />
           </div>
-          <span className="font-bold text-slate-900 dark:text-white text-xl tracking-tight">
+          <span className="font-bold text-slate-900 dark:text-[#f1f5f9] text-xl tracking-tight">
             MIX with Me Classes
           </span>
         </Link>
-        <h1 className="mt-5 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+        <h1 className="mt-4 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-[#f1f5f9]">
           Sign in to your academy
         </h1>
-        <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
+        <p className="mt-1 text-sm text-slate-600 dark:text-[#a9b4c7]">
           Enter your teacher credentials to access your dashboard
         </p>
       </motion.div>
@@ -98,11 +109,11 @@ export const LoginPage: React.FC = () => {
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3, delay: 0.1 }}
-        className="mt-7 sm:mx-auto sm:w-full sm:max-w-md"
+        className="mt-6 sm:mx-auto sm:w-full sm:max-w-md"
       >
         {/* Inactivity Auto-logout Banner */}
         {inactivityWarning && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-2">
+          <div className="mb-4 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
               <span>You were automatically signed out after 60 minutes of inactivity.</span>
@@ -119,7 +130,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Configuration Notice if .env is missing */}
         {!isConfigured && (
-          <div className="mb-4 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-900 text-amber-900 dark:text-amber-200">
+          <div className="mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-900 dark:text-amber-200">
             <div className="flex gap-3">
               <Info className="w-5 h-5 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
               <div className="text-xs">
@@ -133,11 +144,11 @@ export const LoginPage: React.FC = () => {
         )}
 
         {/* Card */}
-        <div className="bg-white dark:bg-[#111a2b] py-8 px-6 shadow-xl shadow-slate-200/50 dark:shadow-soft-dark border border-slate-200 dark:border-[#1f2a3d] rounded-3xl sm:px-10">
+        <div className="bg-white dark:bg-[#131c2e] py-7 px-6 shadow-sm border border-slate-200 dark:border-[#26324a] rounded-2xl sm:px-8">
           <form className="space-y-4" onSubmit={handleSubmit} noValidate>
             {/* General Error Message */}
             {errorMessage && (
-              <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 flex gap-2.5 text-xs text-rose-800 dark:text-rose-300">
+              <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex gap-2.5 text-xs text-rose-800 dark:text-rose-300">
                 <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className="font-medium">{errorMessage}</p>
@@ -149,12 +160,12 @@ export const LoginPage: React.FC = () => {
             <div>
               <label
                 htmlFor="email"
-                className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+                className="block text-xs font-semibold text-slate-700 dark:text-[#a9b4c7] mb-1.5"
               >
                 Email Address
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-[#a9b4c7]">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -167,10 +178,10 @@ export const LoginPage: React.FC = () => {
                     setEmail(e.target.value);
                     if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
                   }}
-                  className={`block w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm border bg-white dark:bg-[#1E293B] text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 transition-colors min-h-[44px] ${
+                  className={`block w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm border bg-white dark:bg-[#1a2540] text-slate-900 dark:text-[#f1f5f9] placeholder-slate-400 dark:placeholder-slate-500 transition-colors min-h-[44px] ${
                     fieldErrors.email
                       ? 'border-rose-400 dark:border-rose-600 focus-visible:border-rose-500'
-                      : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 focus-visible:border-indigo-600 dark:focus-visible:border-indigo-400'
+                      : 'border-slate-300 dark:border-[#26324a] hover:border-slate-400 dark:hover:border-slate-500 focus-visible:border-indigo-600 dark:focus-visible:border-indigo-400'
                   }`}
                   placeholder="teacher@example.com"
                   disabled={isSubmitting}
@@ -186,19 +197,19 @@ export const LoginPage: React.FC = () => {
               <div className="flex items-center justify-between mb-1.5">
                 <label
                   htmlFor="password"
-                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
+                  className="block text-xs font-semibold text-slate-700 dark:text-[#a9b4c7]"
                 >
                   Password
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline min-h-[44px] inline-flex items-center"
+                  className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline min-h-[44px] inline-flex items-center"
                 >
                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-[#a9b4c7]">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -212,10 +223,10 @@ export const LoginPage: React.FC = () => {
                     if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
                     if (errorMessage) setErrorMessage(null);
                   }}
-                  className={`block w-full pl-10 pr-11 py-2.5 rounded-xl text-sm border bg-white dark:bg-[#1E293B] text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 transition-colors min-h-[44px] ${
+                  className={`block w-full pl-10 pr-11 py-2.5 rounded-xl text-sm border bg-white dark:bg-[#1a2540] text-slate-900 dark:text-[#f1f5f9] placeholder-slate-400 dark:placeholder-slate-500 transition-colors min-h-[44px] ${
                     fieldErrors.password
                       ? 'border-rose-400 dark:border-rose-600 focus-visible:border-rose-500'
-                      : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 focus-visible:border-indigo-600 dark:focus-visible:border-indigo-400'
+                      : 'border-slate-300 dark:border-[#26324a] hover:border-slate-400 dark:hover:border-slate-500 focus-visible:border-indigo-600 dark:focus-visible:border-indigo-400'
                   }`}
                   placeholder="Enter your password"
                   disabled={isSubmitting}
@@ -224,7 +235,7 @@ export const LoginPage: React.FC = () => {
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 min-h-[44px] min-w-[44px] justify-center"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-[#f1f5f9] min-h-[44px] min-w-[44px] justify-center"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -239,7 +250,7 @@ export const LoginPage: React.FC = () => {
               <Button
                 type="submit"
                 variant="primary"
-                className="w-full justify-center"
+                className="w-full justify-center min-h-[44px]"
                 loading={isSubmitting}
                 disabled={!isConfigured || isSubmitting}
                 icon={ArrowRight}
@@ -250,12 +261,12 @@ export const LoginPage: React.FC = () => {
           </form>
 
           {/* Open Signup Link */}
-          <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-[#26324a] text-center">
+            <p className="text-xs text-slate-500 dark:text-[#a9b4c7]">
               Don&apos;t have an academy account?{' '}
               <Link
                 to="/register"
-                className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center min-h-[44px]"
+                className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center min-h-[44px]"
               >
                 Create account
               </Link>

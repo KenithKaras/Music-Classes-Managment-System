@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Smartphone } from 'lucide-react';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Input } from './Input';
@@ -7,7 +7,12 @@ import { Select } from './Select';
 import { CurrencyInput } from './CurrencyInput';
 import type { MonthlyFee, Payment, PaymentMethod } from '../types';
 import { formatIndianCurrency, formatBillingMonth } from '../utils/feeUtils';
-import { recordPayment, checkRecentDuplicatePayment } from '../services/paymentService';
+import {
+  recordPayment,
+  checkRecentDuplicatePayment,
+  checkDuplicateUpiTxnId,
+} from '../services/paymentService';
+import { validateUpiTxnId } from '../utils/upiUtils';
 
 export interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -25,6 +30,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const [amount, setAmount] = useState<number>(0);
   const [paymentDate, setPaymentDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [method, setMethod] = useState<PaymentMethod>('cash');
+  const [upiTxnId, setUpiTxnId] = useState<string>('');
+  const [isUpiConfirming, setIsUpiConfirming] = useState<boolean>(false);
   const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -39,6 +46,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       setAmount(balance);
       setPaymentDate(new Date().toISOString().split('T')[0]);
       setMethod('cash');
+      setUpiTxnId('');
+      setIsUpiConfirming(false);
       setNotes('');
       setErrorMessage(null);
       setDuplicateWarning(null);
@@ -50,8 +59,13 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const currentBalance = fee.balance ?? Math.max(0, fee.amount_due - (fee.amount_paid || 0));
   const studentName = fee.student?.full_name || 'Student';
   const monthLabel = formatBillingMonth(fee.billing_month);
+  const willBeStatus = (fee.amount_paid || 0) + amount >= fee.amount_due ? 'paid' : 'partially paid';
 
-  const handleSubmit = async (e?: React.FormEvent, bypassDuplicateCheck = false) => {
+  const handleSubmit = async (
+    e?: React.FormEvent,
+    bypassDuplicateCheck = false,
+    bypassUpiPrompt = false
+  ) => {
     if (e) e.preventDefault();
     setErrorMessage(null);
 
@@ -71,6 +85,34 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
     if (!paymentDate) {
       setErrorMessage('Please select a payment date.');
       return;
+    }
+
+    // UPI-specific validations
+    let cleanedUtr: string | undefined = undefined;
+    if (method === 'upi') {
+      const utrValidation = validateUpiTxnId(upiTxnId);
+      if (!utrValidation.isValid) {
+        setErrorMessage(utrValidation.error || 'Please enter a valid UPI Transaction ID (UTR).');
+        return;
+      }
+      cleanedUtr = utrValidation.formatted;
+
+      setIsSubmitting(true);
+      const dupUtrCheck = await checkDuplicateUpiTxnId(cleanedUtr);
+      if (dupUtrCheck.isDuplicate) {
+        setErrorMessage(
+          `This transaction ID is already recorded for ${dupUtrCheck.studentName || 'another student'}.`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Prompt before saving for UPI
+      if (!bypassUpiPrompt) {
+        setIsSubmitting(false);
+        setIsUpiConfirming(true);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -98,6 +140,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
         amount,
         payment_date: paymentDate,
         method,
+        upi_txn_id: cleanedUtr,
         notes,
       });
 
@@ -109,6 +152,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
       // Success
       setIsSubmitting(false);
+      setIsUpiConfirming(false);
       onClose();
       onSuccess(payment);
     } catch (err: unknown) {
@@ -125,7 +169,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       description={`Record payment for ${studentName} for ${monthLabel}`}
       maxWidth="md"
     >
-      <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4">
+      <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4" noValidate>
         {/* Fee Summary Banner */}
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-600">
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -170,7 +214,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                     size="sm"
                     variant="primary"
                     loading={isSubmitting}
-                    onClick={() => handleSubmit(undefined, true)}
+                    onClick={() => handleSubmit(undefined, true, true)}
                   >
                     Yes, Confirm & Record
                   </Button>
@@ -184,6 +228,44 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                   </Button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* UPI Receipt Verification Confirmation Banner */}
+        {isUpiConfirming && (
+          <div className="bg-indigo-50 border border-indigo-200 dark:bg-indigo-950/40 dark:border-indigo-800 rounded-xl p-3.5 text-xs text-indigo-900 dark:text-indigo-200 space-y-2.5">
+            <div className="flex items-start gap-2.5">
+              <Smartphone className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-sm">Verify UPI Payment</p>
+                <p className="mt-1">
+                  Confirm you have received <strong>{formatIndianCurrency(amount)}</strong> in your UPI app. This will mark the fee as <strong>{willBeStatus}</strong>.
+                </p>
+                <p className="mt-1 text-xs text-indigo-700 dark:text-indigo-300 font-mono">
+                  UTR: {upiTxnId}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                loading={isSubmitting}
+                onClick={() => handleSubmit(undefined, true, true)}
+              >
+                Yes, Received &amp; Record
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={isSubmitting}
+                onClick={() => setIsUpiConfirming(false)}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         )}
@@ -241,7 +323,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             label="Payment Method"
             required
             value={method}
-            onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+            onChange={(e) => {
+              setMethod(e.target.value as PaymentMethod);
+              setErrorMessage(null);
+              setIsUpiConfirming(false);
+            }}
             options={[
               { value: 'cash', label: 'Cash' },
               { value: 'upi', label: 'UPI (GPay / PhonePe / Paytm)' },
@@ -251,6 +337,24 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             ]}
           />
         </div>
+
+        {/* UPI Transaction ID / UTR */}
+        {method === 'upi' && (
+          <div>
+            <Input
+              label="UPI Transaction ID (UTR)"
+              required
+              value={upiTxnId}
+              onChange={(e) => {
+                setUpiTxnId(e.target.value.toUpperCase().trim());
+                setErrorMessage(null);
+                setIsUpiConfirming(false);
+              }}
+              placeholder="e.g. 334455667788"
+              helperText="6 to 35 alphanumeric characters from the student's UPI payment receipt."
+            />
+          </div>
+        )}
 
         {/* Notes */}
         <div>
@@ -276,7 +380,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             type="submit"
             variant="primary"
             loading={isSubmitting}
-            disabled={isSubmitting || !!duplicateWarning}
+            disabled={isSubmitting || !!duplicateWarning || isUpiConfirming}
             icon={CheckCircle2}
           >
             Record Payment

@@ -149,7 +149,7 @@ export const BackupsPage: React.FC = () => {
       <SettingsSubNav />
 
       {/* 1. Full Database Backup Card */}
-      <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-6 shadow-xs space-y-4">
+      <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -186,7 +186,7 @@ export const BackupsPage: React.FC = () => {
       </div>
 
       {/* 2. Restore Database from Backup Card */}
-      <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-6 shadow-xs space-y-5">
+      <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-6 shadow-xs space-y-5">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -210,7 +210,7 @@ export const BackupsPage: React.FC = () => {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono">
               {Object.entries(restoreSuccess).map(([table, count]) => (
                 <div key={table} className="bg-white/70 p-2 rounded-lg border border-emerald-200">
-                  <span className="text-slate-500 block text-[11px]">{table}</span>
+                  <span className="text-slate-500 block text-xs">{table}</span>
                   <span className="font-bold text-emerald-800 text-sm">{count} rows</span>
                 </div>
               ))}

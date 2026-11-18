@@ -329,15 +329,15 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
                         className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all min-h-[44px] flex items-center justify-center ${
                           isSelected
                             ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
-                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                            : 'bg-white dark:bg-[#1a2540] border-slate-200 dark:border-[#26324a] text-slate-700 dark:text-[#f1f5f9] hover:border-slate-300 dark:hover:border-slate-600'
                         }`}
                       >
-                        {day} {isWeekend && <span className="ml-1 text-[10px] opacity-80">(Weekend)</span>}
+                        {day} {isWeekend && <span className="ml-1 text-xs opacity-80">(Weekend)</span>}
                       </button>
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
+                <p className="text-xs text-slate-500 dark:text-[#a9b4c7] mt-2">
                   Weekdays are enabled by default. Weekend slots will only be scheduled if toggled ON.
                 </p>
               </div>

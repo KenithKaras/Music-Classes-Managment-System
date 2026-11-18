@@ -83,7 +83,7 @@ export const BatchesPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header and Sub-Navigation Tabs */}
-      <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-5 sm:p-6 shadow-xs">
+      <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-5 sm:p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -130,7 +130,7 @@ export const BatchesPage: React.FC = () => {
 
       {/* Loading Skeleton */}
       {loading ? (
-        <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-12 text-center">
+        <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-12 text-center">
           <div className="w-8 h-8 border-3 border-slate-200 dark:border-slate-700 border-t-slate-800 dark:border-t-slate-200 rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Loading batch schedules...</p>
         </div>
@@ -155,7 +155,7 @@ export const BatchesPage: React.FC = () => {
             return (
               <div
                 key={batch.id}
-                className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+                className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
               >
                 <div>
                   {/* Top Bar: Title & Capacity Badge */}

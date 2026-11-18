@@ -23,6 +23,10 @@ export interface AcademySettings {
   payment_due_day: number;
   working_hours_config?: WorkingHoursConfig;
   is_onboarding_completed?: boolean;
+  upi_id?: string | null;
+  upi_payee_name?: string | null;
+  upi_qr_path?: string | null;
+  created_at?: string;
   updated_at: string;
 }
 
@@ -224,6 +228,7 @@ export interface Payment {
   payment_date: string; // YYYY-MM-DD
   method: PaymentMethod;
   receipt_number: string;
+  upi_txn_id?: string | null;
   notes: string | null;
   created_at: string;
   student?: {
@@ -248,6 +253,7 @@ export interface RecordPaymentFormData {
   amount: number;
   payment_date: string;
   method: PaymentMethod;
+  upi_txn_id?: string;
   notes?: string;
 }
 

@@ -42,8 +42,29 @@ export const options = {
   },
 };
 
-const SUPABASE_URL = __ENV.VITE_SUPABASE_URL || 'https://your-project-ref.supabase.co';
-const ANON_KEY = __ENV.VITE_SUPABASE_ANON_KEY || 'test-anon-key';
+const STAGING_URL = (__ENV.K6_STAGING_URL || '').trim();
+if (!STAGING_URL) {
+  throw new Error(
+    'ABORT: k6 load test refused to run. The K6_STAGING_URL environment variable is required. Never run load tests against unset or default environments.'
+  );
+}
+
+// Block execution if the URL matches production domains or production Supabase project
+const BLOCKED_PRODUCTION_DOMAINS = [
+  'mix-with-me-classes.vercel.app',
+  'nuuzbpfosohqyybwrgoz.supabase.co',
+];
+
+for (const prodDomain of BLOCKED_PRODUCTION_DOMAINS) {
+  if (STAGING_URL.toLowerCase().includes(prodDomain.toLowerCase())) {
+    throw new Error(
+      `ABORT: k6 load test refused to run. Target URL (${STAGING_URL}) points to production domain: ${prodDomain}. Load testing against production is strictly prohibited.`
+    );
+  }
+}
+
+const SUPABASE_URL = STAGING_URL;
+const ANON_KEY = __ENV.K6_STAGING_ANON_KEY || __ENV.VITE_SUPABASE_ANON_KEY || 'test-anon-key';
 
 // Mock tokens for multi-tenant simulation
 const USER_A_TOKEN = __ENV.USER_A_TOKEN || 'mock-user-a-jwt';

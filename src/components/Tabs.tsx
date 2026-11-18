@@ -51,10 +51,10 @@ export const Tabs: React.FC<TabsProps> = ({
   };
 
   return (
-    <div className={`relative w-full border-b border-slate-200 dark:border-slate-800 ${className}`}>
+    <div className={`relative w-full border-b border-slate-200 dark:border-[#26324a] ${className}`}>
       {/* Mobile Right Edge Gradient Fade (no scrollbar arrow buttons) */}
       <div
-        className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-slate-900 to-transparent sm:hidden z-10"
+        className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-[#0f172a] to-transparent sm:hidden z-10"
         aria-hidden="true"
       />
 
@@ -73,7 +73,7 @@ export const Tabs: React.FC<TabsProps> = ({
                   `whitespace-nowrap px-3 sm:px-4 py-2.5 border-b-2 text-sm font-medium flex items-center gap-2 transition-colors min-h-[44px] shrink-0 rounded-t-lg ${
                     isActive
                       ? 'border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50/40 dark:bg-indigo-950/20'
-                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700'
+                      : 'border-transparent text-slate-500 dark:text-[#a9b4c7] hover:text-slate-800 dark:hover:text-[#f1f5f9] hover:border-slate-300 dark:hover:border-[#26324a]'
                   }`
                 }
               >
@@ -93,7 +93,7 @@ export const Tabs: React.FC<TabsProps> = ({
               className={`whitespace-nowrap px-3 sm:px-4 py-2.5 border-b-2 text-sm font-medium flex items-center gap-2 transition-colors min-h-[44px] shrink-0 rounded-t-lg ${
                 isActive
                   ? 'border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50/40 dark:bg-indigo-950/20'
-                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700'
+                  : 'border-transparent text-slate-500 dark:text-[#a9b4c7] hover:text-slate-800 dark:hover:text-[#f1f5f9] hover:border-slate-300 dark:hover:border-[#26324a]'
               }`}
               aria-current={isActive ? 'page' : undefined}
             >

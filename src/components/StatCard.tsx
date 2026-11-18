@@ -35,7 +35,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-[#94a3b8] uppercase tracking-wider">
+          <p className="text-xs font-semibold text-slate-500 dark:text-[#a9b4c7] uppercase tracking-wider">
             {title}
           </p>
           <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-[#f1f5f9] mt-1.5 tracking-tight">
@@ -51,7 +51,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       </div>
 
       {(subtitle || trend) && (
-        <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-[#1f2a3d] flex items-center justify-between text-xs text-slate-500 dark:text-[#94a3b8]">
+        <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-[#26324a] flex items-center justify-between text-xs text-slate-500 dark:text-[#a9b4c7]">
           {subtitle && <span>{subtitle}</span>}
           {trend && (
             <span

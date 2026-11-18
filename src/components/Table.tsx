@@ -7,8 +7,8 @@ export interface TableProps {
 
 export const Table: React.FC<TableProps> = ({ children, className = '' }) => {
   return (
-    <div className={`overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#1f2a3d] bg-white dark:bg-[#111a2b] shadow-2xs ${className}`}>
-      <table className="min-w-full divide-y divide-slate-200 dark:divide-[#1f2a3d] text-left text-sm text-slate-700 dark:text-slate-300">
+    <div className={`overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#26324a] bg-white dark:bg-[#131c2e] shadow-2xs ${className}`}>
+      <table className="min-w-full divide-y divide-slate-200 dark:divide-[#26324a] text-left text-sm text-slate-700 dark:text-[#a9b4c7]">
         {children}
       </table>
     </div>

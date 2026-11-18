@@ -8,6 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        'base-bg': 'var(--base-bg)',
         surface: 'var(--surface)',
         'surface-raised': 'var(--surface-raised)',
         'card-border': 'var(--card-border)',

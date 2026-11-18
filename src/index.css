@@ -4,30 +4,32 @@
 
 @layer base {
   :root {
+    --base-bg: #f8fafc;
     --surface: #ffffff;
-    --surface-raised: #f8fafc;
+    --surface-raised: #f1f5f9;
     --card-border: #e2e8f0;
     --input-bg: #ffffff;
     --input-border: #cbd5e1;
     --input-text: #0f172a;
     --input-placeholder: #64748b;
     --text-primary: #0f172a;
-    --text-muted: #64748b;
+    --text-muted: #475569;
     --accent: #4f46e5;
     --accent-hover: #4338ca;
     --focus-ring: #4f46e5;
   }
 
   .dark {
-    --surface: #111a2b;
-    --surface-raised: #1e293b;
-    --card-border: #1f2a3d;
-    --input-bg: #1e293b;
-    --input-border: #334155;
+    --base-bg: #0f172a;
+    --surface: #131c2e;
+    --surface-raised: #1a2540;
+    --card-border: #26324a;
+    --input-bg: #131c2e;
+    --input-border: #26324a;
     --input-text: #f1f5f9;
-    --input-placeholder: #94a3b8;
+    --input-placeholder: #a9b4c7;
     --text-primary: #f1f5f9;
-    --text-muted: #94a3b8;
+    --text-muted: #a9b4c7;
     --accent: #6366f1;
     --accent-hover: #818cf8;
     --focus-ring: #818cf8;
@@ -55,7 +57,7 @@
   }
 
   html.dark, html.dark body, html.dark #root {
-    background-color: #0b1220;
+    background-color: #0f172a;
     color: #f1f5f9;
   }
 

@@ -100,29 +100,29 @@ export const WhatsAppReminderModal: React.FC<WhatsAppReminderModalProps> = ({
     >
       <div className="space-y-4">
         {/* Recipient summary banner */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs space-y-1.5 transition-colors">
+        <div className="bg-slate-50 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] rounded-xl p-3 text-xs space-y-1.5 transition-colors">
           <div className="flex justify-between items-center">
-            <span className="text-slate-500 dark:text-slate-400">Student:</span>
-            <span className="font-semibold text-slate-900 dark:text-slate-100">{effectiveStudent.full_name}</span>
+            <span className="text-slate-500 dark:text-[#a9b4c7]">Student:</span>
+            <span className="font-semibold text-slate-900 dark:text-[#f1f5f9]">{effectiveStudent.full_name}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-slate-500 dark:text-slate-400">Recipient Contact:</span>
-            <span className="font-medium text-slate-800 dark:text-slate-200">
+            <span className="text-slate-500 dark:text-[#a9b4c7]">Recipient Contact:</span>
+            <span className="font-medium text-slate-800 dark:text-[#f1f5f9]">
               {effectiveStudent.guardian_name
                 ? `${effectiveStudent.guardian_name} (Guardian)`
                 : 'Student Directly'}
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-slate-500 dark:text-slate-400">Phone Number:</span>
-            <span className={`font-mono font-medium ${isPhoneValid ? 'text-slate-800 dark:text-slate-200' : 'text-rose-600 dark:text-rose-400'}`}>
+            <span className="text-slate-500 dark:text-[#a9b4c7]">Phone Number:</span>
+            <span className={`font-mono font-medium ${isPhoneValid ? 'text-slate-800 dark:text-[#f1f5f9]' : 'text-rose-600 dark:text-rose-400'}`}>
               {rawPhone || 'Not provided'}
               {cleanedPhone12Digits && ` (+${cleanedPhone12Digits})`}
             </span>
           </div>
           {fee && (
-            <div className="flex justify-between items-center pt-1 border-t border-slate-200 dark:border-slate-700">
-              <span className="text-slate-500 dark:text-slate-400">Pending Balance:</span>
+            <div className="flex justify-between items-center pt-1 border-t border-slate-200 dark:border-[#26324a]">
+              <span className="text-slate-500 dark:text-[#a9b4c7]">Pending Balance:</span>
               <span className="font-bold text-rose-600 dark:text-rose-400">{formatIndianCurrency(currentBalance)}</span>
             </div>
           )}
@@ -145,10 +145,10 @@ export const WhatsAppReminderModal: React.FC<WhatsAppReminderModalProps> = ({
         {/* Editable Message Area */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label htmlFor="reminder-msg" className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+            <label htmlFor="reminder-msg" className="block text-sm font-medium text-slate-700 dark:text-[#f1f5f9]">
               Message Preview (Editable)
             </label>
-            <span className="text-xs text-slate-400 dark:text-slate-500">{message.length} chars</span>
+            <span className="text-xs text-slate-400 dark:text-[#a9b4c7]">{message.length} chars</span>
           </div>
           <textarea
             id="reminder-msg"
@@ -156,15 +156,15 @@ export const WhatsAppReminderModal: React.FC<WhatsAppReminderModalProps> = ({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type your WhatsApp reminder message..."
-            className="block w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent font-sans transition-colors shadow-2xs"
+            className="block w-full rounded-xl border border-slate-300 dark:border-[#26324a] bg-white dark:bg-slate-900 dark:bg-[#1a2540] p-3 text-sm text-slate-900 dark:text-[#f1f5f9] placeholder:text-slate-400 dark:placeholder:text-[#a9b4c7] focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent font-sans transition-colors shadow-2xs"
           />
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#a9b4c7]">
             You can customize this message before opening WhatsApp.
           </p>
         </div>
 
         {/* Footer Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-[#26324a]">
           <Button
             type="button"
             variant="secondary"

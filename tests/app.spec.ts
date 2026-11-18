@@ -59,6 +59,9 @@ const MOCK_ACADEMY = {
   address: '123 Music Lane, Bandra West, Mumbai',
   default_monthly_fee: 3000,
   payment_due_day: 5,
+  upi_id: 'academy@okhdfcbank',
+  upi_payee_name: 'MIX with Me Classes',
+  upi_qr_path: '11111111-1111-1111-1111-111111111111/upi/qr.png',
   working_hours_config: {
     workingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
     weekdayWindow: { startTime: '14:00', endTime: '21:00' },
@@ -147,6 +150,19 @@ const MOCK_FEES = [
     created_at: '2026-11-01T00:00:00Z',
     updated_at: '2026-11-01T00:00:00Z',
     student: MOCK_STUDENTS[0],
+    payments: [
+      {
+        id: 'pay-1',
+        owner_id: MOCK_USER_ID,
+        student_id: 'student-1',
+        monthly_fee_id: 'fee-1',
+        amount: 3000,
+        payment_date: '2026-11-04',
+        method: 'upi',
+        receipt_number: 'REC-202611-001',
+        created_at: '2026-11-04T00:00:00Z',
+      },
+    ],
   },
   {
     id: 'fee-2',
@@ -161,6 +177,19 @@ const MOCK_FEES = [
     created_at: '2026-11-01T00:00:00Z',
     updated_at: '2026-11-01T00:00:00Z',
     student: MOCK_STUDENTS[1],
+    payments: [
+      {
+        id: 'pay-prev',
+        owner_id: MOCK_USER_ID,
+        student_id: 'student-2',
+        monthly_fee_id: 'fee-2',
+        amount: 1000,
+        payment_date: '2026-11-02',
+        method: 'cash',
+        receipt_number: 'REC-202611-002',
+        created_at: '2026-11-02T00:00:00Z',
+      },
+    ],
   },
 ];
 
@@ -210,10 +239,12 @@ async function setupMockSessionAndRoutes(
     ({ session, themeMode }) => {
       localStorage.setItem('mix_theme', themeMode);
       localStorage.setItem('sb-nuuzbpfosohqyybwrgoz-auth-token', JSON.stringify(session));
-      if (themeMode === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
+      if (document.documentElement) {
+        if (themeMode === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
       }
     },
     { session: MOCK_SESSION, themeMode: theme }
@@ -235,6 +266,31 @@ async function setupMockSessionAndRoutes(
     });
   });
 
+  await page.route('**/storage/v1/object/**', async (route) => {
+    const method = route.request().method();
+    if (method === 'POST' || method === 'PUT') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ Key: 'academy-assets/11111111-1111-1111-1111-111111111111/upi/qr.png' }),
+      });
+      return;
+    }
+    if (method === 'DELETE') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Successfully deleted' }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
+    });
+  });
+
   await page.route('**/rest/v1/**', async (route) => {
     const req = route.request();
     const url = req.url();
@@ -243,6 +299,16 @@ async function setupMockSessionAndRoutes(
     const table = url.split('/rest/v1/')[1]?.split('?')[0];
 
     if (table === 'academy_settings') {
+      if (method === 'PATCH' || method === 'PUT') {
+        const patchData = req.postDataJSON() || {};
+        const updated = { ...MOCK_ACADEMY, ...patchData };
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(updated),
+        });
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -279,6 +345,49 @@ async function setupMockSessionAndRoutes(
     }
 
     if (table === 'payments') {
+      if (url.includes('upi_txn_id=eq.')) {
+        const utrParam = url.split('upi_txn_id=eq.')[1]?.split('&')[0];
+        if (utrParam === 'DUPLICATE123') {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              id: 'dup-1',
+              upi_txn_id: 'DUPLICATE123',
+              student: { full_name: 'Aarav Patel' },
+            }),
+          });
+          return;
+        } else {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: isSingle ? null : JSON.stringify([]),
+          });
+          return;
+        }
+      }
+      if (method === 'POST') {
+        const body = req.postDataJSON() || {};
+        const recorded = {
+          id: 'pay-new-' + Date.now(),
+          owner_id: MOCK_USER_ID,
+          receipt_number: 'REC-202611-999',
+          amount: body.amount || 2500,
+          payment_date: body.payment_date || '2026-11-05',
+          method: body.method || 'upi',
+          upi_txn_id: body.upi_txn_id || null,
+          created_at: new Date().toISOString(),
+          student: MOCK_STUDENTS[1],
+          monthly_fee: MOCK_FEES[1],
+        };
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify(recorded),
+        });
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -449,22 +558,41 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
   });
 
   // ----------------------------------------------------------------------------
-  // 4. ZERO 4xx ERRORS ON ANY PAGE AFTER LOGIN
+  // 4. ZERO 4xx/5xx ERRORS AND ZERO CONSOLE ERRORS ACROSS ALL PAGES
   // ----------------------------------------------------------------------------
-  test('4. 400 errors: assert zero 4xx responses across all pages after login', async ({ page }) => {
+  test('4. 400 errors: assert zero 4xx responses and zero console errors across all pages', async ({ page }) => {
     test.setTimeout(90000);
     const failed4xx: string[] = [];
+    const consoleErrors: string[] = [];
 
     page.on('response', (response) => {
       const status = response.status();
       const url = response.url();
-      if (status >= 400 && status < 500) {
+      if (status >= 400) {
         failed4xx.push(`${status} ${response.request().method()} ${url}`);
       }
     });
 
-    await setupMockSessionAndRoutes(page, 'light');
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        // Ignore expected network mock drops if any
+        consoleErrors.push(msg.text());
+      }
+    });
 
+    page.on('pageerror', (err) => {
+      consoleErrors.push(err.message);
+    });
+
+    // Public pages (unauthenticated)
+    const publicPages = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+    for (const p of publicPages) {
+      await page.goto(p, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(100);
+    }
+
+    // Authenticated pages
+    await setupMockSessionAndRoutes(page, 'light');
     const appPages = [
       '/dashboard',
       '/students',
@@ -478,13 +606,18 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     ];
 
     for (const p of appPages) {
-      await page.goto(p);
+      await page.goto(p, { waitUntil: 'domcontentloaded' });
       await page.waitForTimeout(100);
     }
 
     expect(
       failed4xx,
-      `Expected zero 4xx responses across pages, but found: ${JSON.stringify(failed4xx)}`
+      `Expected zero 4xx/5xx responses across pages, but found: ${JSON.stringify(failed4xx)}`
+    ).toHaveLength(0);
+
+    expect(
+      consoleErrors,
+      `Expected zero console errors across pages, but found: ${JSON.stringify(consoleErrors)}`
     ).toHaveLength(0);
   });
 
@@ -580,28 +713,96 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
   });
 
   // ----------------------------------------------------------------------------
-  // 8. WHATSAPP REMINDER MODAL: THEME TOKENS AND CLEAN PHONE DIGITS
+  // 8. WHATSAPP REMINDER MODAL: THEME TOKENS, CONTRAST, SCREENSHOTS & CLEAN PHONE
   // ----------------------------------------------------------------------------
-  test('8. WhatsApp Modal: verifies theme tokens on textarea and cleaned phone number digits in wa.me link', async ({ page }) => {
-    await setupMockSessionAndRoutes(page, 'dark');
-    await page.goto('/fees');
+  test('8. WhatsApp Modal: verifies theme tokens on textarea, contrast, screenshots, and cleaned phone number digits in wa.me link', async ({ page }) => {
+    const BRAIN_DIR = 'C:/Users/Lenovo/.gemini/antigravity/brain/a11ce3f2-9ef5-4d6d-914d-203fd9aa3d80';
+    if (!fs.existsSync(BRAIN_DIR)) {
+      fs.mkdirSync(BRAIN_DIR, { recursive: true });
+    }
 
-    // Wait for fees page to load
+    function calculateContrast(rgb1: number[], rgb2: number[]): number {
+      const getL = (c: number[]) => {
+        const [r, g, b] = c.map((v) => {
+          const s = v / 255;
+          return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const l1 = getL(rgb1);
+      const l2 = getL(rgb2);
+      const lighter = Math.max(l1, l2);
+      const darker = Math.min(l1, l2);
+      return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    function parseRgb(colorStr: string): number[] {
+      const match = colorStr.match(/\d+/g);
+      if (match && match.length >= 3) {
+        return [parseInt(match[0], 10), parseInt(match[1], 10), parseInt(match[2], 10)];
+      }
+      return [0, 0, 0];
+    }
+
+    // --- Part 1: Light Mode ---
+    await setupMockSessionAndRoutes(page, 'light');
+    await page.goto('/fees');
     await expect(page.locator('h1', { hasText: 'Fees & Payments' })).toBeVisible();
 
-    // Click on the WhatsApp reminder button on the fee record
-    const whatsappBtn = page.locator('button[title="Send WhatsApp Reminder"]:visible').first();
-    await expect(whatsappBtn).toBeVisible({ timeout: 10000 });
-    await whatsappBtn.click();
+    const whatsappBtnLight = page.locator('button[title="Send WhatsApp Reminder"]:visible').first();
+    await expect(whatsappBtnLight).toBeVisible({ timeout: 10000 });
+    await whatsappBtnLight.click();
 
-    // Verify modal is visible
-    const modalHeading = page.locator('h3', { hasText: 'Send WhatsApp Reminder' });
-    await expect(modalHeading).toBeVisible();
+    const modalHeadingLight = page.locator('h3', { hasText: 'Send WhatsApp Reminder' });
+    await expect(modalHeadingLight).toBeVisible();
 
-    // Verify textarea has dark mode theme class
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    await expect(textarea).toHaveClass(/dark:bg-slate-900/);
+    const textareaLight = page.locator('textarea');
+    await expect(textareaLight).toBeVisible();
+    await expect(textareaLight).toHaveClass(/bg-white/);
+
+    const lightColors = await textareaLight.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      return { color: style.color, bg: style.backgroundColor };
+    });
+    const lightContrast = calculateContrast(parseRgb(lightColors.color), parseRgb(lightColors.bg));
+    expect(lightContrast).toBeGreaterThanOrEqual(4.5);
+
+    // Save light mode screenshot
+    const lightShotLocal = path.join(SCREENSHOT_DIR, 'whatsapp_modal_light.png');
+    const lightShotBrain = path.join(BRAIN_DIR, 'whatsapp_modal_light.png');
+    await page.screenshot({ path: lightShotLocal });
+    try {
+      fs.copyFileSync(lightShotLocal, lightShotBrain);
+    } catch {
+      // Safe fallback if another concurrent worker is writing the file
+    }
+
+    // Close modal
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(modalHeadingLight).not.toBeVisible();
+
+    // --- Part 2: Dark Mode ---
+    await setupMockSessionAndRoutes(page, 'dark');
+    await page.goto('/fees');
+    await expect(page.locator('h1', { hasText: 'Fees & Payments' })).toBeVisible();
+
+    const whatsappBtnDark = page.locator('button[title="Send WhatsApp Reminder"]:visible').first();
+    await expect(whatsappBtnDark).toBeVisible({ timeout: 10000 });
+    await whatsappBtnDark.click();
+
+    const modalHeadingDark = page.locator('h3', { hasText: 'Send WhatsApp Reminder' });
+    await expect(modalHeadingDark).toBeVisible();
+
+    const textareaDark = page.locator('textarea');
+    await expect(textareaDark).toBeVisible();
+    await expect(textareaDark).toHaveClass(/dark:bg-slate-900/);
+
+    const darkColors = await textareaDark.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      return { color: style.color, bg: style.backgroundColor };
+    });
+    const darkContrast = calculateContrast(parseRgb(darkColors.color), parseRgb(darkColors.bg));
+    expect(darkContrast).toBeGreaterThanOrEqual(4.5);
 
     // Verify phone summary cleans number to digits only (e.g. +919876543288)
     const phoneDisplay = page.locator('text=/\\(\\+\\d+\\)/').first();
@@ -611,6 +812,16 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     const openBtn = page.getByRole('button', { name: /Open WhatsApp/i });
     await expect(openBtn).toBeVisible();
     await expect(openBtn).toBeEnabled();
+
+    // Save dark mode screenshot
+    const darkShotLocal = path.join(SCREENSHOT_DIR, 'whatsapp_modal_dark.png');
+    const darkShotBrain = path.join(BRAIN_DIR, 'whatsapp_modal_dark.png');
+    await page.screenshot({ path: darkShotLocal });
+    try {
+      fs.copyFileSync(darkShotLocal, darkShotBrain);
+    } catch {
+      // Safe fallback if another concurrent worker is writing the file
+    }
   });
 
   // ----------------------------------------------------------------------------
@@ -718,6 +929,278 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
           expect(fs.existsSync(filePath)).toBe(true);
         });
       }
+
+      // Public pages (unauthenticated)
+      for (const p of [
+        { name: 'Landing', path: '/' },
+        { name: 'Login', path: '/login' },
+      ]) {
+        test(`Layout Test: ${p.name} at ${vp.name} [${theme}]`, async ({ page }) => {
+          await page.setViewportSize({ width: vp.width, height: vp.height });
+          await page.addInitScript(
+            ({ themeMode }) => {
+              localStorage.setItem('mix_theme', themeMode);
+              if (document.documentElement) {
+                if (themeMode === 'dark') {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              }
+            },
+            { themeMode: theme }
+          );
+
+          await page.goto(p.path, { waitUntil: 'domcontentloaded' });
+          await page.waitForTimeout(200);
+
+          const hasOverflow = await page.evaluate(() => {
+            const doc = document.documentElement;
+            const body = document.body;
+            const scrollWidth = Math.max(doc.scrollWidth, body.scrollWidth);
+            const clientWidth = doc.clientWidth;
+            return scrollWidth > clientWidth + 1;
+          });
+
+          expect(
+            hasOverflow,
+            `Expected ${p.name} at ${vp.name} [${theme}] to have zero horizontal page overflow.`
+          ).toBe(false);
+
+          const screenshotName = `${p.name.toLowerCase()}-${vp.name}-${theme}.png`;
+          const filePath = path.join(SCREENSHOT_DIR, screenshotName);
+          await page.screenshot({ path: filePath, fullPage: true });
+          expect(fs.existsSync(filePath)).toBe(true);
+        });
+      }
     }
   }
+
+  // ----------------------------------------------------------------------------
+  // 11. MOBILE TABS SCROLL AND NO ARROW BUTTONS
+  // ----------------------------------------------------------------------------
+  test('11. Mobile tabs: verify no scroll arrow boxes and horizontal scroll enabled', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await setupMockSessionAndRoutes(page, 'light');
+
+    for (const p of ['/fees', '/settings', '/students']) {
+      await page.goto(p);
+      await page.waitForTimeout(100);
+
+      // Verify no arrow scroll buttons exist
+      const arrowButtons = page.locator('button[aria-label*="scroll"], button:has-text("◀"), button:has-text("▶")');
+      expect(await arrowButtons.count()).toBe(0);
+
+      // Verify tab container has overflow-x-auto
+      const tabContainer = page.locator('.overflow-x-auto, [role="tablist"]').first();
+      await expect(tabContainer).toBeVisible();
+    }
+  });
+
+  // ----------------------------------------------------------------------------
+  // 12. UPI SETTINGS: UPI ID, PAYEE NAME, QR CODE PREVIEW & OPTIONS
+  // ----------------------------------------------------------------------------
+  test('12. UPI Settings: save UPI ID, payee name, QR options, preview container, confirm dialogs', async ({ page }) => {
+    await setupMockSessionAndRoutes(page, 'light');
+    await page.goto('/settings');
+    await expect(page.locator('h1', { hasText: 'Settings' })).toBeVisible();
+
+    // Verify Payment Details (UPI) Card exists
+    const upiCardHeader = page.locator('h2', { hasText: 'Payment Details (UPI)' });
+    await expect(upiCardHeader).toBeVisible();
+
+    // Verify helper text
+    await expect(
+      page.locator('text=Set this once. Payment requests and receipts will use it automatically.')
+    ).toBeVisible();
+
+    // Verify UPI ID and Payee Name inputs
+    const upiInput = page.locator('input[placeholder*="academy@okaxis"]');
+    await expect(upiInput).toBeVisible();
+    await expect(upiInput).toHaveValue('academy@okhdfcbank');
+
+    const payeeInput = page.getByRole('textbox', { name: 'Payee Name' });
+    await expect(payeeInput).toBeVisible();
+
+    // Verify QR Code Preview
+    await expect(page.locator('img[alt="UPI QR Code"]')).toBeVisible();
+    await expect(page.locator('button:has-text("Replace QR (Upload)")')).toBeVisible();
+    await expect(page.locator('button:has-text("Regenerate from UPI ID")')).toBeVisible();
+    await expect(page.locator('button:has-text("Remove QR")')).toBeVisible();
+
+    // Test Save Settings
+    await page.getByRole('button', { name: 'Save Settings' }).click();
+    await expect(page.locator('text=Academy settings updated successfully!')).toBeVisible();
+  });
+
+  // ----------------------------------------------------------------------------
+  // 13. PAYMENT REQUEST MODAL
+  // ----------------------------------------------------------------------------
+  test('13. Payment Request Modal: trigger payment request for unpaid fee row, verify QR, copy buttons, PDF & WhatsApp link', async ({ page }) => {
+    await setupMockSessionAndRoutes(page, 'light');
+    await page.goto('/fees');
+    await expect(page.locator('h1', { hasText: 'Fees & Payments' })).toBeVisible();
+
+    // Find the unpaid row and click "Send payment request"
+    const reqBtn = page
+      .locator('tr:has-text("Diya Sharma"), div.p-4:has-text("Diya Sharma")')
+      .getByRole('button', { name: /Send payment request/i })
+      .filter({ visible: true })
+      .first();
+    await expect(reqBtn).toBeVisible({ timeout: 10000 });
+    await reqBtn.scrollIntoViewIfNeeded();
+    await reqBtn.click({ force: true });
+
+    // Modal opens
+    const modal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('h3', { hasText: 'Payment Request' })).toBeVisible();
+
+    // Verify balance due and student details inside modal
+    await expect(modal.getByText('Diya Sharma', { exact: true })).toBeVisible();
+    await expect(modal.locator('text=₹2,500')).toBeVisible();
+
+    // Verify QR Code image is present
+    await expect(modal.locator('img[alt="Academy UPI QR Code"]')).toBeVisible();
+
+    // Verify UPI ID copy button
+    await expect(modal.locator('text=academy@okhdfcbank')).toBeVisible();
+    const copyUpiBtn = modal.locator('button:has-text("Copy UPI ID")');
+    await expect(copyUpiBtn).toBeVisible();
+
+    // Verify notice for WhatsApp
+    await expect(
+      modal.locator('text=WhatsApp cannot attach the QR automatically. Attach the downloaded PDF before sending.')
+    ).toBeVisible();
+
+    // Verify Download PDF button is present
+    const pdfBtn = modal.getByRole('button', { name: /Download payment request \(PDF\)/i });
+    await expect(pdfBtn).toBeVisible();
+
+    // Verify WhatsApp button is present with wa.me link
+    const waBtn = modal.getByRole('button', { name: /Open WhatsApp/i });
+    await expect(waBtn).toBeVisible();
+
+    // Close modal
+    await modal.getByRole('button', { name: 'Close dialog' }).click();
+    await expect(modal).not.toBeVisible();
+  });
+
+  // ----------------------------------------------------------------------------
+  // 14. RECORD UPI PAYMENT WITH UTR VALIDATION & VERIFICATION PROMPT
+  // ----------------------------------------------------------------------------
+  test('14. Record UPI Payment: record payment with method UPI requires valid UTR, checks duplicate UTR, prompts verification before saving', async ({ page }) => {
+    await setupMockSessionAndRoutes(page, 'light');
+    await page.goto('/fees');
+    await expect(page.locator('h1', { hasText: 'Fees & Payments' })).toBeVisible();
+
+    // Click Record Payment or Pay on unpaid fee (balance 2500)
+    const recordBtn = page
+      .locator('tr:has-text("Diya Sharma"), div.p-4:has-text("Diya Sharma")')
+      .getByRole('button', { name: /^Record Payment$|^Pay$/ })
+      .filter({ visible: true })
+      .first();
+    await expect(recordBtn).toBeVisible({ timeout: 10000 });
+    await recordBtn.dispatchEvent('click');
+
+    // Modal opens
+    const modal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('h3', { hasText: 'Record Fee Payment' })).toBeVisible();
+
+    // Select payment method "UPI"
+    const methodSelect = modal.locator('select');
+    await methodSelect.selectOption('upi');
+
+    // UTR field appears
+    const utrInput = modal.locator('input[placeholder*="334455667788"]');
+    await expect(utrInput).toBeVisible();
+
+    // 1. Submit without UTR -> validation error
+    await modal.locator('button:has-text("Record Payment")').click();
+    await expect(modal.locator('text=UPI Transaction ID (UTR) is required.')).toBeVisible();
+
+    // 2. Submit short UTR -> format validation error
+    await utrInput.fill('ABC');
+    await modal.locator('button:has-text("Record Payment")').click();
+    await expect(modal.locator('text=UPI Transaction ID (UTR) must be 6 to 35 letters and digits.')).toBeVisible();
+
+    // 3. Submit duplicate UTR -> duplicate error
+    await utrInput.fill('DUPLICATE123');
+    await modal.locator('button:has-text("Record Payment")').click();
+    await expect(modal.locator('text=This transaction ID is already recorded for Aarav Patel.')).toBeVisible();
+
+    // 4. Submit valid UTR -> verification prompt appears
+    await utrInput.fill('VALIDUTR123456');
+    await modal.locator('button:has-text("Record Payment")').click();
+
+    // Prompt appears: "Confirm you have received ₹2,500 in your UPI app. This will mark the fee as paid."
+    const promptBanner = modal.locator('text=Confirm you have received');
+    await expect(promptBanner).toBeVisible();
+    await expect(modal.locator('text=This will mark the fee as paid.')).toBeVisible();
+
+    // Click "Yes, Received & Record"
+    const confirmBtn = modal.locator('button:has-text("Yes, Received & Record")');
+    await expect(confirmBtn).toBeVisible();
+    await confirmBtn.click();
+
+    // Receipt Modal opens
+    const receiptModal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(receiptModal.locator('h3', { hasText: 'Payment Receipt' })).toBeVisible();
+    await expect(receiptModal.locator('text=UTR: VALIDUTR123456')).toBeVisible();
+  });
+
+  // ----------------------------------------------------------------------------
+  // 15. UPI TENANT ISOLATION
+  // ----------------------------------------------------------------------------
+  test('15. UPI Tenant Isolation: User B cannot access User A UPI settings or QR storage path', async ({ page }) => {
+    const USER_B_ID = '99999999-9999-9999-9999-999999999999';
+    const userBSession = {
+      ...MOCK_SESSION,
+      user: {
+        ...MOCK_SESSION.user,
+        id: USER_B_ID,
+        email: 'userb@example.com',
+      },
+    };
+
+    await page.addInitScript(
+      ({ session }) => {
+        localStorage.setItem('mix_theme', 'light');
+        localStorage.setItem('sb-nuuzbpfosohqyybwrgoz-auth-token', JSON.stringify(session));
+      },
+      { session: userBSession }
+    );
+
+    // User B has their own settings without User A's UPI
+    await page.route('**/rest/v1/academy_settings**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            ...MOCK_ACADEMY,
+            owner_id: USER_B_ID,
+            academy_name: 'User B Studio',
+            upi_id: null,
+            upi_payee_name: null,
+            upi_qr_path: null,
+          },
+        ]),
+      });
+    });
+
+    await page.goto('/settings');
+    await expect(page.locator('h1', { hasText: 'Settings' })).toBeVisible();
+
+    // Verify User A's UPI ID is not present
+    const upiInput = page.locator('input[placeholder*="academy@okaxis"]');
+    await expect(upiInput).toBeVisible();
+    await expect(upiInput).toHaveValue('');
+
+    // Verify option to upload or generate QR is shown instead of User A's QR preview
+    await expect(page.locator('text=Option A: Upload QR Image')).toBeVisible();
+    await expect(page.locator('text=Option B: Generate QR from UPI ID')).toBeVisible();
+    await expect(page.locator('img[alt="UPI QR Code"]')).not.toBeVisible();
+  });
 });

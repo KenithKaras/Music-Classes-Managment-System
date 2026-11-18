@@ -148,7 +148,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
             {compressing ? 'Optimizing image...' : 'Click to upload or drag and drop'}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             PNG, JPG, or WebP up to 2 MB
           </p>
         </div>

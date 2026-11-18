@@ -26,6 +26,7 @@ import { TransferBatchModal } from '../components/TransferBatchModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Tabs } from '../components/Tabs';
 import { formatDisplayDate } from '../utils/formUtils';
+import { formatIndianCurrency } from '../utils/feeUtils';
 import { useDebounce } from '../hooks/useDebounce';
 import { queryClient } from '../lib/queryClient';
 
@@ -171,13 +172,13 @@ export const StudentsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header and Sub-Navigation Tabs */}
-      <div className="bg-white dark:bg-[#111a2b] rounded-xl border border-slate-200 dark:border-[#1f2a3d] p-5 sm:p-6 shadow-xs">
+      <div className="bg-white dark:bg-[#131c2e] rounded-2xl border border-slate-200 dark:border-[#26324a] p-5 sm:p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-[#f1f5f9]">
               Students &amp; Batches
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-[#a9b4c7] mt-1">
               Manage student enrollment, contact records, fee assignments, and batch allocations.
             </p>
           </div>
@@ -209,7 +210,7 @@ export const StudentsPage: React.FC = () => {
       </div>
 
       {/* Filters Bar */}
-      <div className="bg-white dark:bg-[#111a2b] rounded-xl border border-slate-200 dark:border-[#1f2a3d] p-4 shadow-xs">
+      <div className="bg-white dark:bg-[#131c2e] rounded-2xl border border-slate-200 dark:border-[#26324a] p-4 shadow-sm">
         <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
           <div className="sm:col-span-5">
             <Input
@@ -251,7 +252,7 @@ export const StudentsPage: React.FC = () => {
 
       {/* Error Banner */}
       {error && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm">
+        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-sm">
           <p className="font-semibold">Error Loading Students</p>
           <p className="mt-0.5">{error}</p>
         </div>
@@ -259,9 +260,9 @@ export const StudentsPage: React.FC = () => {
 
       {/* Loading Skeleton */}
       {loading ? (
-        <div className="bg-white dark:bg-[#111a2b] rounded-xl border border-slate-200 dark:border-[#1f2a3d] p-12 text-center">
-          <div className="w-8 h-8 border-3 border-slate-200 dark:border-slate-700 border-t-indigo-600 rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Loading student roster...</p>
+        <div className="bg-white dark:bg-[#131c2e] rounded-2xl border border-slate-200 dark:border-[#26324a] p-12 text-center">
+          <div className="w-8 h-8 border-2 border-slate-200 dark:border-[#26324a] border-t-indigo-600 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm font-medium text-slate-600 dark:text-[#a9b4c7]">Loading student roster...</p>
         </div>
       ) : students.length === 0 ? (
         <EmptyState
@@ -294,7 +295,7 @@ export const StudentsPage: React.FC = () => {
           {/* Desktop Table View (hidden on small screens) */}
           <div className="hidden md:block">
             <Table>
-              <thead className="bg-slate-50 dark:bg-slate-900/60 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <thead className="bg-slate-50 dark:bg-[#1a2540] text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-[#a9b4c7]">
                 <tr>
                   <th scope="col" className="px-6 py-3.5">Student</th>
                   <th scope="col" className="px-6 py-3.5">Phone &amp; Email</th>
@@ -304,13 +305,13 @@ export const StudentsPage: React.FC = () => {
                   <th scope="col" className="px-6 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-[#111a2b]">
+              <tbody className="divide-y divide-slate-200 dark:divide-[#26324a] bg-white dark:bg-[#131c2e]">
                 {students.map((student) => (
-                  <tr key={student.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                  <tr key={student.id} className="hover:bg-slate-50 dark:hover:bg-[#1a2540] transition-colors">
                     {/* Student Avatar & Name */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] overflow-hidden flex items-center justify-center shrink-0">
                           {student.photo_url ? (
                             <img
                               src={student.photo_url}
@@ -324,11 +325,11 @@ export const StudentsPage: React.FC = () => {
                         <div>
                           <Link
                             to={`/students/${student.id}`}
-                            className="font-semibold text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                            className="font-semibold text-slate-900 dark:text-[#f1f5f9] hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                           >
                             {student.full_name}
                           </Link>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                          <p className="text-xs text-slate-500 dark:text-[#a9b4c7]">
                             Enrolled: {formatDisplayDate(student.enrollment_date)}
                           </p>
                         </div>
@@ -336,14 +337,14 @@ export const StudentsPage: React.FC = () => {
                     </td>
 
                     {/* Contact */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-[#a9b4c7]">
                       <div>
-                        <div className="flex items-center gap-1.5 text-slate-900 font-medium">
+                        <div className="flex items-center gap-1.5 text-slate-900 dark:text-[#f1f5f9] font-medium">
                           <Phone className="w-3.5 h-3.5 text-slate-400" />
                           <span>{student.phone || 'No phone'}</span>
                         </div>
                         {student.email && (
-                          <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#a9b4c7] mt-0.5">
                             <Mail className="w-3.5 h-3.5 text-slate-400" />
                             <span>{student.email}</span>
                           </div>
@@ -355,22 +356,22 @@ export const StudentsPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {student.batch ? (
                         <div>
-                          <span className="font-medium text-slate-900">{student.batch.name}</span>
-                          <p className="text-xs text-slate-500">
-                            {(student.batch.days_of_week || []).join(', ')} •{' '}
+                          <span className="font-medium text-slate-900 dark:text-[#f1f5f9]">{student.batch.name}</span>
+                          <p className="text-xs text-slate-500 dark:text-[#a9b4c7]">
+                            {(student.batch.days_of_week || []).join(', ')} &bull;{' '}
                             {student.batch.start_time?.substring(0, 5)} - {student.batch.end_time?.substring(0, 5)}
                           </p>
                         </div>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 font-medium">
+                        <span className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/60 font-medium">
                           Unassigned
                         </span>
                       )}
                     </td>
 
                     {/* Fee */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
-                      ₹{student.monthly_fee}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-[#f1f5f9]">
+                      {formatIndianCurrency(student.monthly_fee)}
                     </td>
 
                     {/* Status */}
@@ -391,7 +392,7 @@ export const StudentsPage: React.FC = () => {
                           onClick={() => setTransferStudent(student)}
                           title="Transfer Batch"
                           aria-label="Transfer Batch"
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors"
+                          className="p-1.5 rounded-lg text-slate-500 dark:text-[#a9b4c7] hover:text-slate-900 dark:hover:text-[#f1f5f9] hover:bg-slate-100 dark:hover:bg-[#1a2540] min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors"
                         >
                           <ArrowRightLeft className="w-4 h-4" />
                         </button>
@@ -403,7 +404,7 @@ export const StudentsPage: React.FC = () => {
                           }}
                           title="Edit Student"
                           aria-label="Edit Student"
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors"
+                          className="p-1.5 rounded-lg text-slate-500 dark:text-[#a9b4c7] hover:text-slate-900 dark:hover:text-[#f1f5f9] hover:bg-slate-100 dark:hover:bg-[#1a2540] min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -412,7 +413,7 @@ export const StudentsPage: React.FC = () => {
                           onClick={() => setStudentToDelete(student)}
                           title="Delete Student"
                           aria-label="Delete Student"
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors"
+                          className="p-1.5 rounded-lg text-slate-500 dark:text-[#a9b4c7] hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -429,12 +430,12 @@ export const StudentsPage: React.FC = () => {
             {students.map((student) => (
               <div
                 key={student.id}
-                className="bg-white dark:bg-[#111a2b] rounded-xl border border-slate-200 dark:border-[#1f2a3d] p-4 shadow-2xs space-y-3"
+                className="bg-white dark:bg-[#131c2e] rounded-2xl border border-slate-200 dark:border-[#26324a] p-4 shadow-sm space-y-3"
               >
                 {/* Header: Photo, Name, Status */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] overflow-hidden flex items-center justify-center shrink-0">
                       {student.photo_url ? (
                         <img
                           src={student.photo_url}
@@ -448,11 +449,11 @@ export const StudentsPage: React.FC = () => {
                     <div>
                       <Link
                         to={`/students/${student.id}`}
-                        className="font-bold text-slate-900 dark:text-slate-100 text-base hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block"
+                        className="font-bold text-slate-900 dark:text-[#f1f5f9] text-base hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block"
                       >
                         {student.full_name}
                       </Link>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-slate-500 dark:text-[#a9b4c7]">
                         Enrolled: {formatDisplayDate(student.enrollment_date)}
                       </p>
                     </div>
@@ -467,29 +468,29 @@ export const StudentsPage: React.FC = () => {
                 </div>
 
                 {/* Details grid */}
-                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100">
+                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100 dark:border-[#26324a]">
                   <div>
-                    <span className="text-slate-400 font-medium block">Phone</span>
-                    <span className="font-semibold text-slate-800">{student.phone || '—'}</span>
+                    <span className="text-slate-400 dark:text-[#a9b4c7] font-medium block">Phone</span>
+                    <span className="font-semibold text-slate-800 dark:text-[#f1f5f9]">{student.phone || '—'}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-medium block">Monthly Fee</span>
-                    <span className="font-semibold text-slate-900">₹{student.monthly_fee}</span>
+                    <span className="text-slate-400 dark:text-[#a9b4c7] font-medium block">Monthly Fee</span>
+                    <span className="font-semibold text-slate-900 dark:text-[#f1f5f9]">{formatIndianCurrency(student.monthly_fee)}</span>
                   </div>
                   <div className="col-span-2 mt-1">
-                    <span className="text-slate-400 font-medium block">Batch</span>
-                    <span className="font-medium text-slate-800">
+                    <span className="text-slate-400 dark:text-[#a9b4c7] font-medium block">Batch</span>
+                    <span className="font-medium text-slate-800 dark:text-[#f1f5f9]">
                       {student.batch ? (
                         `${student.batch.name} (${(student.batch.days_of_week || []).join(', ')})`
                       ) : (
-                        <span className="text-amber-700">Unassigned (No Batch)</span>
+                        <span className="text-amber-700 dark:text-amber-400">Unassigned (No Batch)</span>
                       )}
                     </span>
                   </div>
                 </div>
 
-                {/* Action Buttons (Large enough for touch targets) */}
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2">
+                {/* Action Buttons */}
+                <div className="pt-2 border-t border-slate-100 dark:border-[#26324a] grid grid-cols-2 gap-2">
                   <Button
                     type="button"
                     variant="secondary"
@@ -525,7 +526,7 @@ export const StudentsPage: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setStudentToDelete(student)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                     icon={<Trash2 className="w-3.5 h-3.5" />}
                   >
                     Delete
@@ -537,18 +538,18 @@ export const StudentsPage: React.FC = () => {
 
           {/* Server-side Range Pagination Controls */}
           {totalCount > 0 && (
-            <div className="bg-white dark:bg-[#111a2b] rounded-xl border border-slate-200 dark:border-[#1f2a3d] p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
-              <div className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">
+            <div className="bg-white dark:bg-[#131c2e] rounded-2xl border border-slate-200 dark:border-[#26324a] p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+              <div className="text-xs sm:text-sm font-medium text-slate-600 dark:text-[#a9b4c7]">
                 Showing{' '}
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                <span className="font-semibold text-slate-900 dark:text-[#f1f5f9]">
                   {(page - 1) * pageSize + 1}
                 </span>{' '}
                 to{' '}
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                <span className="font-semibold text-slate-900 dark:text-[#f1f5f9]">
                   {Math.min(page * pageSize, totalCount)}
                 </span>{' '}
                 of{' '}
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                <span className="font-semibold text-slate-900 dark:text-[#f1f5f9]">
                   {totalCount}
                 </span>{' '}
                 students
@@ -566,7 +567,7 @@ export const StudentsPage: React.FC = () => {
                 >
                   Previous
                 </Button>
-                <span className="px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
+                <span className="px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 dark:text-[#a9b4c7]">
                   Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}
                 </span>
                 <Button
@@ -614,7 +615,7 @@ export const StudentsPage: React.FC = () => {
         message={
           <>
             Are you sure you want to delete student{' '}
-            <strong className="text-slate-900">&ldquo;{studentToDelete?.full_name}&rdquo;</strong>?
+            <strong className="text-slate-900 dark:text-[#f1f5f9]">&ldquo;{studentToDelete?.full_name}&rdquo;</strong>?
             This will permanently remove their profile, contact records, and photo. This action cannot be undone.
           </>
         }

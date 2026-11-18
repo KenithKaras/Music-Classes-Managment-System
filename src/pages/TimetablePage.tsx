@@ -353,7 +353,7 @@ export const TimetablePage: React.FC = () => {
       </div>
 
       {/* Mode Selector & Working Days Controls */}
-      <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-4 shadow-xs space-y-4">
+      <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 shadow-xs space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Mode Tabs */}
           <div className="flex flex-wrap items-center gap-2 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl w-full sm:w-auto">
@@ -362,7 +362,7 @@ export const TimetablePage: React.FC = () => {
               onClick={() => setViewMode('auto')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all min-h-[38px] flex items-center justify-center gap-2 flex-1 sm:flex-initial ${
                 viewMode === 'auto'
-                  ? 'bg-white dark:bg-[#111A2B] text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  ? 'bg-white dark:bg-[#131c2e] text-indigo-600 dark:text-indigo-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -374,7 +374,7 @@ export const TimetablePage: React.FC = () => {
               onClick={() => setViewMode('manual')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all min-h-[38px] flex items-center justify-center gap-2 flex-1 sm:flex-initial ${
                 viewMode === 'manual'
-                  ? 'bg-white dark:bg-[#111A2B] text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  ? 'bg-white dark:bg-[#131c2e] text-indigo-600 dark:text-indigo-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -412,7 +412,7 @@ export const TimetablePage: React.FC = () => {
         </div>
 
         {/* Live Validation Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-[#26324a] text-xs">
           <div className="flex items-center gap-2">
             {validationStatus.isValid ? (
               <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-semibold">
@@ -427,7 +427,7 @@ export const TimetablePage: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px]">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs">
             <span>Active Days: {workingConfig.workingDays.join(', ')}</span>
             <span>&bull;</span>
             <span>Break: {workingConfig.minBreakMinutes}m</span>
@@ -504,7 +504,7 @@ export const TimetablePage: React.FC = () => {
                       className={`px-3 py-1.5 rounded-lg font-bold border transition-all ${
                         isChecked
                           ? 'bg-indigo-600 text-white border-indigo-600'
-                          : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800'
+                          : 'bg-white dark:bg-[#1a2540] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-[#26324a]'
                       }`}
                     >
                       {d}
@@ -539,8 +539,8 @@ export const TimetablePage: React.FC = () => {
 
       {/* AUTO-GENERATE DRAFT CONTROLS & STATS */}
       {viewMode === 'auto' && (
-        <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-5 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-5 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-[#26324a]">
             <div>
               <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -567,7 +567,7 @@ export const TimetablePage: React.FC = () => {
             <div className="space-y-4 pt-1">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40">
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">
                     Total Teaching
                   </span>
                   <span className="text-lg font-black text-slate-900 dark:text-white">
@@ -576,7 +576,7 @@ export const TimetablePage: React.FC = () => {
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40">
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">
                     Campus Days
                   </span>
                   <span className="text-lg font-black text-slate-900 dark:text-white">
@@ -585,7 +585,7 @@ export const TimetablePage: React.FC = () => {
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40">
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">
                     Longest Idle Gap
                   </span>
                   <span className="text-lg font-black text-slate-900 dark:text-white">
@@ -594,7 +594,7 @@ export const TimetablePage: React.FC = () => {
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">
                     Weekend Classes
                   </span>
                   <span className="text-lg font-black text-slate-900 dark:text-white">
@@ -627,7 +627,7 @@ export const TimetablePage: React.FC = () => {
 
       {/* MANUAL MODE ACTIONS BAR */}
       {viewMode === 'manual' && (
-        <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-medium">
             <span>Manual Mode: Click &quot;Add Class to Draft&quot; to place or adjust class slots.</span>
           </div>
@@ -645,8 +645,8 @@ export const TimetablePage: React.FC = () => {
       )}
 
       {/* TIMETABLE GRID (DRAFT OR SAVED CLASSES) */}
-      <div className="bg-white dark:bg-[#111A2B] border border-slate-200 dark:border-[#1F2A3D] rounded-2xl p-4 sm:p-6 shadow-xs space-y-6">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+      <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 sm:p-6 shadow-xs space-y-6">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-[#26324a]">
           <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
             {hasDraft ? 'Weekly Draft Preview' : 'Saved Week Timetable'}
           </h2>
@@ -686,18 +686,18 @@ export const TimetablePage: React.FC = () => {
                 key={day}
                 className={`rounded-2xl border p-4 flex flex-col justify-between min-h-[220px] transition-colors ${
                   isWeekend
-                    ? 'bg-slate-50/60 dark:bg-slate-950/40 border-dashed border-slate-300 dark:border-slate-800'
-                    : 'bg-slate-50/40 dark:bg-slate-950/20 border-slate-200 dark:border-slate-800'
+                    ? 'bg-slate-50/60 dark:bg-[#0f172a] border-dashed border-slate-300 dark:border-[#26324a]'
+                    : 'bg-slate-50/40 dark:bg-[#0f172a] border-slate-200 dark:border-[#26324a]'
                 }`}
               >
                 <div>
-                  <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-200/80 dark:border-slate-800">
+                  <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-200/80 dark:border-[#26324a]">
                     <span className="font-extrabold text-sm text-slate-900 dark:text-white">
-                      {day} {isWeekend && <span className="text-[10px] text-indigo-500 font-semibold">(Weekend)</span>}
+                      {day} {isWeekend && <span className="text-xs text-indigo-500 font-semibold">(Weekend)</span>}
                     </span>
 
                     {hasDraft && dayDraftClasses.length > 0 && (
-                      <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                      <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
                         {dayDraftClasses.length}
                       </span>
                     )}
@@ -714,7 +714,7 @@ export const TimetablePage: React.FC = () => {
                         dayDraftClasses.map((cls) => (
                           <div
                             key={cls.tempId}
-                            className="p-3 rounded-xl bg-white dark:bg-[#111A2B] border border-indigo-200 dark:border-indigo-900/60 shadow-2xs space-y-1.5"
+                            className="p-3 rounded-xl bg-white dark:bg-[#131c2e] border border-indigo-200 dark:border-indigo-900/60 shadow-2xs space-y-1.5"
                           >
                             <div className="flex items-start justify-between gap-1">
                               <p className="font-bold text-xs text-slate-900 dark:text-white truncate">
@@ -730,7 +730,7 @@ export const TimetablePage: React.FC = () => {
                               </button>
                             </div>
 
-                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono">
                               <Clock className="w-3.5 h-3.5 text-indigo-500" />
                               <span>
                                 {formatDisplayTime(cls.start_time)} - {formatDisplayTime(cls.end_time)}
@@ -753,8 +753,8 @@ export const TimetablePage: React.FC = () => {
                             key={cls.id}
                             className={`p-3 rounded-xl border shadow-2xs space-y-1.5 ${
                               cls.status === 'cancelled'
-                                ? 'bg-slate-100 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 opacity-70'
-                                : 'bg-white dark:bg-[#111A2B] border-slate-200 dark:border-[#1F2A3D]'
+                                ? 'bg-slate-100 dark:bg-slate-800/40 border-slate-200 dark:border-[#26324a] opacity-70'
+                                : 'bg-white dark:bg-[#131c2e] border-slate-200 dark:border-[#26324a]'
                             }`}
                           >
                             <div className="flex items-start justify-between gap-1">
@@ -766,7 +766,7 @@ export const TimetablePage: React.FC = () => {
                               )}
                             </div>
 
-                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono">
                               <Clock className="w-3.5 h-3.5 text-indigo-500" />
                               <span>
                                 {formatDisplayTime(cls.start_time)} - {formatDisplayTime(cls.end_time)}
@@ -775,11 +775,11 @@ export const TimetablePage: React.FC = () => {
 
                             {/* Attendance trigger */}
                             {cls.status !== 'cancelled' && (
-                              <div className="pt-1 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/60">
+                              <div className="pt-1 flex items-center justify-between border-t border-slate-100 dark:border-[#26324a]/60">
                                 <button
                                   type="button"
                                   onClick={() => setAttendanceTarget(cls)}
-                                  className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 min-h-[32px]"
+                                  className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 min-h-[32px]"
                                 >
                                   <ClipboardCheck className="w-3 h-3" />
                                   <span>

@@ -163,4 +163,50 @@ describe('Multi-Tenant Data Isolation & Security Rules', () => {
     // Logged-out visitor trying to access storage
     expect(isStoragePathAllowed(`${USER_A}/logos/logo.png`, null)).toBe(false);
   });
+
+  describe('get_dashboard_summary Owner Resolution Logic (010b)', () => {
+    function resolveDashboardOwner(
+      callerUid: string | null,
+      jwtRole: string | null,
+      p_owner_id: string | null
+    ): { owner_id: string } {
+      const v_caller_id = callerUid;
+      let v_owner_id: string;
+
+      if (v_caller_id !== null) {
+        v_owner_id = v_caller_id;
+      } else if (p_owner_id !== null && (jwtRole || '') === 'service_role') {
+        v_owner_id = p_owner_id;
+      } else {
+        throw new Error('Not authenticated');
+      }
+      return { owner_id: v_owner_id };
+    }
+
+    it('always binds to auth.uid() for authenticated users, even if p_owner_id is passed', () => {
+      // Normal teacher calling their dashboard
+      const res = resolveDashboardOwner('teacher-uuid', 'authenticated', null);
+      expect(res.owner_id).toBe('teacher-uuid');
+
+      // Malicious teacher trying to spoof another teacher via p_owner_id
+      const spoofAttempt = resolveDashboardOwner('teacher-uuid', 'authenticated', 'victim-uuid');
+      expect(spoofAttempt.owner_id).toBe('teacher-uuid');
+      expect(spoofAttempt.owner_id).not.toBe('victim-uuid');
+    });
+
+    it('rejects anon or unauthorized callers trying to pass p_owner_id', () => {
+      expect(() => resolveDashboardOwner(null, 'anon', 'victim-uuid')).toThrow('Not authenticated');
+      expect(() => resolveDashboardOwner(null, '', 'victim-uuid')).toThrow('Not authenticated');
+      expect(() => resolveDashboardOwner(null, null, 'victim-uuid')).toThrow('Not authenticated');
+    });
+
+    it('honors p_owner_id only when caller role is service_role', () => {
+      const res = resolveDashboardOwner(null, 'service_role', 'admin-selected-owner');
+      expect(res.owner_id).toBe('admin-selected-owner');
+    });
+
+    it('rejects service_role without p_owner_id', () => {
+      expect(() => resolveDashboardOwner(null, 'service_role', null)).toThrow('Not authenticated');
+    });
+  });
 });

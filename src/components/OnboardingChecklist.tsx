@@ -104,21 +104,21 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
               className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-2.5 ${
                 item.completed
                   ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/60'
-                  : 'bg-white dark:bg-slate-900/80 border-slate-200 dark:border-slate-800'
+                  : 'bg-white dark:bg-[#1a2540] border-slate-200 dark:border-[#26324a]'
               }`}
             >
               <div className="flex items-start gap-2.5">
                 {item.completed ? (
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                 ) : (
-                  <Circle className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+                  <Circle className="w-5 h-5 text-slate-400 dark:text-[#a9b4c7] shrink-0 mt-0.5" />
                 )}
                 <div>
                   <p
                     className={`text-xs font-bold leading-tight ${
                       item.completed
                         ? 'text-emerald-900 dark:text-emerald-200 line-through opacity-80'
-                        : 'text-slate-900 dark:text-white'
+                        : 'text-slate-900 dark:text-[#f1f5f9]'
                     }`}
                   >
                     {item.label}

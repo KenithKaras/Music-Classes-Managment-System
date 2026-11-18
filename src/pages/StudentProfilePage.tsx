@@ -18,6 +18,7 @@ import {
   PlusCircle,
   MessageSquare,
   FileText,
+  QrCode,
 } from 'lucide-react';
 import { getStudentById, updateStudent, deleteStudent, transferStudentBatch } from '../services/studentService';
 import { getStudentAttendanceSummary } from '../services/attendanceService';
@@ -42,6 +43,7 @@ import { RecordPaymentModal } from '../components/RecordPaymentModal';
 import { ReceiptModal } from '../components/ReceiptModal';
 import { WhatsAppReminderModal } from '../components/WhatsAppReminderModal';
 import { ModifyStudentFeeModal } from '../components/ModifyStudentFeeModal';
+import { PaymentRequestModal } from '../components/PaymentRequestModal';
 
 export const StudentProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -75,6 +77,8 @@ export const StudentProfilePage: React.FC = () => {
   const [receiptBalanceRemaining, setReceiptBalanceRemaining] = useState<number>(0);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [reminderFee, setReminderFee] = useState<MonthlyFee | null>(null);
+  const [isPaymentRequestOpen, setIsPaymentRequestOpen] = useState(false);
+  const [paymentRequestFee, setPaymentRequestFee] = useState<MonthlyFee | null>(null);
   const [isModifyFeeOpen, setIsModifyFeeOpen] = useState(false);
 
   const loadStudent = async () => {
@@ -151,7 +155,7 @@ export const StudentProfilePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-12 text-center">
+      <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-12 text-center">
         <div className="w-8 h-8 border-3 border-slate-200 dark:border-slate-700 border-t-slate-800 dark:border-t-slate-200 rounded-full animate-spin mx-auto mb-3" />
         <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Loading student profile...</p>
       </div>
@@ -169,7 +173,7 @@ export const StudentProfilePage: React.FC = () => {
         >
           Back to Students
         </Button>
-        <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-8 text-center">
+        <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-8 text-center">
           <p className="text-red-600 dark:text-rose-400 font-semibold mb-2">Student Not Found</p>
           <p className="text-sm text-slate-500 dark:text-slate-400">{error || 'This student record does not exist or was deleted.'}</p>
         </div>
@@ -224,7 +228,7 @@ export const StudentProfilePage: React.FC = () => {
       </div>
 
       {/* Main Profile Header Card */}
-      <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-6 shadow-xs">
+      <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
           <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
             {student.photo_url ? (
@@ -254,7 +258,7 @@ export const StudentProfilePage: React.FC = () => {
             </p>
           </div>
 
-          <div className="sm:text-right p-3 rounded-lg bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-[#1F2A3D] w-full sm:w-auto">
+          <div className="sm:text-right p-3 rounded-lg bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-[#26324a] w-full sm:w-auto">
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium block">Monthly Tuition Fee</span>
             <div className="flex items-center sm:justify-end gap-2 mt-0.5">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -275,7 +279,7 @@ export const StudentProfilePage: React.FC = () => {
       {/* Detailed Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Batch Allocation */}
-        <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-6 shadow-xs">
+        <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-6 shadow-xs">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Layers className="w-5 h-5 text-slate-700 dark:text-slate-300" />
@@ -293,7 +297,7 @@ export const StudentProfilePage: React.FC = () => {
 
           {student.batch ? (
             <div className="space-y-3">
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-[#1F2A3D]">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-[#26324a]">
                 <Link
                   to={`/batches/${student.batch.id}`}
                   className="font-bold text-slate-900 dark:text-slate-100 text-base hover:text-indigo-600 dark:hover:text-indigo-400 block transition-colors"
@@ -327,7 +331,7 @@ export const StudentProfilePage: React.FC = () => {
         </div>
 
         {/* Contact Information */}
-        <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-6 shadow-xs">
+        <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-6 shadow-xs">
           <div className="pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Phone className="w-5 h-5 text-slate-700 dark:text-slate-300" />
@@ -357,7 +361,7 @@ export const StudentProfilePage: React.FC = () => {
                 <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                 Residential Address:
               </span>
-              <p className="text-slate-800 dark:text-slate-200 font-medium bg-slate-50 dark:bg-[#1E293B] p-2.5 rounded-lg border border-slate-200 dark:border-[#1F2A3D] text-xs sm:text-sm">
+              <p className="text-slate-800 dark:text-slate-200 font-medium bg-slate-50 dark:bg-[#1E293B] p-2.5 rounded-lg border border-slate-200 dark:border-[#26324a] text-xs sm:text-sm">
                 {student.address || 'No residential address recorded.'}
               </p>
             </div>
@@ -365,7 +369,7 @@ export const StudentProfilePage: React.FC = () => {
         </div>
 
         {/* Guardian / Emergency Contact */}
-        <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-6 shadow-xs">
+        <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-6 shadow-xs">
           <div className="pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Shield className="w-5 h-5 text-slate-700 dark:text-slate-300" />
@@ -391,7 +395,7 @@ export const StudentProfilePage: React.FC = () => {
         </div>
 
         {/* Attendance Summary */}
-        <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-6 shadow-xs">
+        <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-6 shadow-xs">
           <div className="pb-3 border-b border-slate-100 dark:border-slate-800 mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <ClipboardCheck className="w-5 h-5 text-slate-700 dark:text-slate-300" />
@@ -410,15 +414,15 @@ export const StudentProfilePage: React.FC = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/60">
-                  <span className="text-[11px] font-semibold uppercase text-emerald-700 dark:text-emerald-300 block">Present</span>
+                  <span className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-300 block">Present</span>
                   <span className="text-lg font-bold text-emerald-800 dark:text-emerald-200">{attendanceStats.present}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-red-50 dark:bg-rose-950/40 border border-red-100 dark:border-rose-900/60">
-                  <span className="text-[11px] font-semibold uppercase text-red-700 dark:text-rose-300 block">Absent</span>
+                  <span className="text-xs font-semibold uppercase text-red-700 dark:text-rose-300 block">Absent</span>
                   <span className="text-lg font-bold text-red-800 dark:text-rose-200">{attendanceStats.absent}</span>
                 </div>
-                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-[#1F2A3D]">
-                  <span className="text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400 block">Total</span>
+                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-[#26324a]">
+                  <span className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 block">Total</span>
                   <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{attendanceStats.total}</span>
                 </div>
               </div>
@@ -452,14 +456,28 @@ export const StudentProfilePage: React.FC = () => {
         </div>
 
         {/* Fees & Dues Overview */}
-        <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-6 shadow-xs md:col-span-2">
+        <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-6 shadow-xs md:col-span-2">
           <div className="pb-3 border-b border-slate-100 dark:border-slate-800 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               Fees &amp; Payment History
             </h2>
             {feeSummary && feeSummary.totalBalance > 0 && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const unpaidFee = feeSummary.fees.find((f) => (f.balance || 0) > 0);
+                    if (unpaidFee) {
+                      setPaymentRequestFee(unpaidFee);
+                      setIsPaymentRequestOpen(true);
+                    }
+                  }}
+                  icon={<QrCode className="w-3.5 h-3.5" />}
+                >
+                  Send payment request
+                </Button>
                 <Button
                   size="sm"
                   variant="secondary"
@@ -493,7 +511,7 @@ export const StudentProfilePage: React.FC = () => {
           {feeSummary ? (
             <div className="space-y-6">
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-[#1F2A3D]">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-[#26324a]">
                   <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase block">Total Invoiced</span>
                   <span className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
                     {formatIndianCurrency(feeSummary.totalDue)}
@@ -509,7 +527,7 @@ export const StudentProfilePage: React.FC = () => {
                   className={`p-3 rounded-xl border ${
                     feeSummary.totalBalance > 0
                       ? 'bg-red-50 dark:bg-rose-950/40 border-red-200 dark:border-rose-900/60 text-red-900 dark:text-rose-200'
-                      : 'bg-slate-50 dark:bg-[#1E293B] border-slate-200 dark:border-[#1F2A3D] text-slate-700 dark:text-slate-300'
+                      : 'bg-slate-50 dark:bg-[#1E293B] border-slate-200 dark:border-[#26324a] text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   <span className="text-xs font-medium uppercase block">Outstanding Balance</span>
@@ -533,7 +551,7 @@ export const StudentProfilePage: React.FC = () => {
                     No monthly fee records generated yet.
                   </p>
                 ) : (
-                  <div className="border border-slate-200 dark:border-[#1F2A3D] rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                  <div className="border border-slate-200 dark:border-[#26324a] rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                     {feeSummary.fees.map((fee) => (
                       <div
                         key={fee.id}
@@ -559,14 +577,27 @@ export const StudentProfilePage: React.FC = () => {
                             )}
                           </div>
                           {(fee.balance || 0) > 0 && (
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              onClick={() => setSelectedFeeForPayment(fee)}
-                              icon={<PlusCircle className="w-3 h-3" />}
-                            >
-                              Pay
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setPaymentRequestFee(fee);
+                                  setIsPaymentRequestOpen(true);
+                                }}
+                                icon={<QrCode className="w-3 h-3" />}
+                              >
+                                Send payment request
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                onClick={() => setSelectedFeeForPayment(fee)}
+                                icon={<PlusCircle className="w-3 h-3" />}
+                              >
+                                Pay
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -581,7 +612,7 @@ export const StudentProfilePage: React.FC = () => {
                   <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Payment Receipts History
                   </h3>
-                  <div className="border border-slate-200 dark:border-[#1F2A3D] rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                  <div className="border border-slate-200 dark:border-[#26324a] rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                     {feeSummary.payments.map((p) => (
                       <div
                         key={p.id}
@@ -622,7 +653,7 @@ export const StudentProfilePage: React.FC = () => {
         </div>
 
         {/* Record Metadata */}
-        <div className="bg-white dark:bg-[#111A2B] rounded-xl border border-slate-200 dark:border-[#1F2A3D] p-6 shadow-xs">
+        <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-6 shadow-xs">
           <div className="pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Clock className="w-5 h-5 text-slate-700 dark:text-slate-300" />
@@ -731,6 +762,16 @@ export const StudentProfilePage: React.FC = () => {
         onClose={() => setIsModifyFeeOpen(false)}
         student={student}
         onSuccess={() => loadStudent()}
+      />
+
+      {/* Payment Request Modal */}
+      <PaymentRequestModal
+        isOpen={isPaymentRequestOpen}
+        onClose={() => {
+          setIsPaymentRequestOpen(false);
+          setPaymentRequestFee(null);
+        }}
+        fee={paymentRequestFee}
       />
     </div>
   );

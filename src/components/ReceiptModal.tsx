@@ -4,7 +4,7 @@ import { Modal } from './Modal';
 import { Button } from './Button';
 import type { Payment, AcademySettings } from '../types';
 import { formatIndianCurrency, formatBillingMonth } from '../utils/feeUtils';
-import { downloadReceiptPdf } from '../utils/receiptPdf';
+import { downloadReceiptPdf, downloadReceiptDocx } from '../utils/receiptPdf';
 import { getAcademySettings } from '../services/academyService';
 
 export interface ReceiptModalProps {
@@ -23,7 +23,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   academySettings: propSettings,
 }) => {
   const [settings, setSettings] = useState<AcademySettings | null>(propSettings || null);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
 
   useEffect(() => {
     if (!propSettings && isOpen) {
@@ -42,8 +43,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     ? formatBillingMonth(payment.monthly_fee.billing_month)
     : 'Music Class Fee';
 
-  const handleDownload = async () => {
-    setIsDownloading(true);
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
     try {
       await downloadReceiptPdf({
         payment,
@@ -51,7 +52,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         balanceRemaining,
       });
     } finally {
-      setIsDownloading(false);
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  const handleDownloadDocx = async () => {
+    setIsDownloadingDocx(true);
+    try {
+      await downloadReceiptDocx({
+        payment,
+        academySettings: settings,
+        balanceRemaining,
+      });
+    } finally {
+      setIsDownloadingDocx(false);
     }
   };
 
@@ -122,6 +136,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <p className="text-slate-500 mt-0.5 uppercase">
                 Mode: {payment.method.replace('_', ' ')}
               </p>
+              {payment.method === 'upi' && payment.upi_txn_id && (
+                <p className="text-slate-700 mt-0.5 font-mono text-[11px] font-medium">
+                  UTR: {payment.upi_txn_id}
+                </p>
+              )}
             </div>
           </div>
 
@@ -170,7 +189,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           )}
 
           {/* Signatory */}
-          <div className="mt-8 pt-4 border-t border-slate-100 flex items-end justify-between text-[11px] text-slate-400">
+          <div className="mt-8 pt-4 border-t border-slate-100 flex items-end justify-between text-xs text-slate-400">
             <div>
               <p>Generated electronically</p>
               <p>MIX with Me Classes</p>
@@ -192,7 +211,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             Print
           </Button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="secondary"
@@ -202,9 +221,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </Button>
             <Button
               type="button"
+              variant="secondary"
+              loading={isDownloadingDocx}
+              onClick={handleDownloadDocx}
+              icon={Download}
+            >
+              Download Word
+            </Button>
+            <Button
+              type="button"
               variant="primary"
-              loading={isDownloading}
-              onClick={handleDownload}
+              loading={isDownloadingPdf}
+              onClick={handleDownloadPdf}
               icon={Download}
             >
               Download PDF
