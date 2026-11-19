@@ -392,6 +392,7 @@ export function buildPaymentRequestWhatsAppUrl(params: {
   dueDate: string;
   academyName: string;
   paymentUrl?: string | null;
+  allowedUpiIds?: string;
 }): { url: string | null; message: string; isPhoneValid: boolean } {
   const cleanDigits = cleanIndianPhoneNumber(params.phone);
   const formattedBalance = formatIndianCurrency(params.balanceDue);
@@ -400,7 +401,7 @@ export function buildPaymentRequestWhatsAppUrl(params: {
     `Hello, this is a payment request from ${params.academyName}. Balance due for ${params.studentName} is ${formattedBalance}, due by ${params.dueDate}.`,
   ];
 
-  if (params.paymentUrl) {
+  if (params.paymentUrl && isUpiIdAllowed(params.upiId, params.allowedUpiIds)) {
     lines.push(`Pay here:\n${params.paymentUrl}`);
   }
 

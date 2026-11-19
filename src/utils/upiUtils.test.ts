@@ -178,6 +178,42 @@ describe('UPI Utils - Validators, Encoders & Business Logic', () => {
       expect(res.message).toContain('Kindly send the UPI transaction ID (UTR) after payment. Thank you!');
       expect(res.message).not.toContain('upi://');
     });
+
+    it('for an allowlisted UPI ID, WhatsApp message contains both https link and Pay here: line', () => {
+      const res = buildPaymentRequestWhatsAppUrl({
+        phone: '9876543210',
+        studentName: 'Aarav Patel',
+        balanceDue: 2500,
+        upiId: 'academy@okhdfcbank',
+        dueDate: '5 Nov 2026',
+        academyName: 'MIX with Me Classes',
+        paymentUrl: 'https://mix-with-me-classes.vercel.app/pay?pa=academy%40okhdfcbank&pn=MIX%20with%20Me%20Classes&am=2500.00&tn=Music%20fees%20Nov%202026&tr=ABCD1234EFGH5678',
+        allowedUpiIds: 'academy@okhdfcbank',
+      });
+
+      expect(res.message).toContain('Pay here:');
+      expect(res.message).toContain('https://mix-with-me-classes.vercel.app/pay?');
+      expect(res.message).toContain('UPI ID: academy@okhdfcbank');
+      expect(res.message).toContain('Kindly send the UPI transaction ID (UTR) after payment. Thank you!');
+    });
+
+    it('for a non-allowlisted UPI ID, WhatsApp message contains no https link and no Pay here: line', () => {
+      const res = buildPaymentRequestWhatsAppUrl({
+        phone: '9876543210',
+        studentName: 'Aarav Patel',
+        balanceDue: 2500,
+        upiId: 'attacker@okhdfcbank',
+        dueDate: '5 Nov 2026',
+        academyName: 'MIX with Me Classes',
+        paymentUrl: 'https://mix-with-me-classes.vercel.app/pay?pa=attacker%40okhdfcbank&pn=MIX%20with%20Me%20Classes&am=2500.00&tn=Music%20fees%20Nov%202026&tr=ABCD1234EFGH5678',
+        allowedUpiIds: 'academy@okhdfcbank',
+      });
+
+      expect(res.message).not.toContain('Pay here:');
+      expect(res.message).not.toContain('https://');
+      expect(res.message).toContain('UPI ID: attacker@okhdfcbank');
+      expect(res.message).toContain('Kindly send the UPI transaction ID (UTR) after payment. Thank you!');
+    });
   });
 
   describe('dataUrlToBlob - Direct In-Memory Base64 to Blob Converter (No CSP connect-src violation)', () => {

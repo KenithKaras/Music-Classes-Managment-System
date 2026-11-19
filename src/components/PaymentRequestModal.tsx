@@ -19,6 +19,7 @@ import {
   buildPaymentRequestWhatsAppUrl,
   cleanIndianPhoneNumber,
   buildHttpsPaymentUrl,
+  isUpiIdAllowed,
 } from '../utils/upiUtils';
 import { downloadPaymentRequestPdf } from '../utils/paymentRequestPdf';
 
@@ -72,9 +73,10 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
     ? supabase.storage.from('academy-assets').getPublicUrl(qrStoragePath).data.publicUrl
     : '';
   const isUpiConfigured = Boolean(upiId);
+  const isUpiAllowed = isUpiConfigured && isUpiIdAllowed(upiId);
 
   // Per-request HTTPS payment URL
-  const { url: httpsPayUrl } = isUpiConfigured
+  const { url: httpsPayUrl } = isUpiAllowed
     ? buildHttpsPaymentUrl({
         upiId,
         payeeName: academyName,
@@ -230,35 +232,6 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
               </div>
             </div>
 
-            {/* HTTPS Payment Link Container */}
-            {httpsPayUrl && (
-              <div className="bg-slate-50 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] rounded-xl p-3.5 space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold text-slate-500 dark:text-[#a9b4c7] uppercase tracking-wider">
-                      Payment Link
-                    </p>
-                    <p
-                      className="font-mono text-xs text-indigo-600 dark:text-indigo-400 truncate select-all"
-                      data-testid="payment-link-url"
-                    >
-                      {httpsPayUrl}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleCopyLink}
-                    icon={copiedLink ? Check : Copy}
-                    className="min-h-[38px] shrink-0"
-                  >
-                    {copiedLink ? 'Copied' : 'Copy link'}
-                  </Button>
-                </div>
-              </div>
-            )}
-
             {/* QR Code and UPI ID Container */}
             <div className="bg-white dark:bg-[#101726] border border-slate-200 dark:border-[#26324a] rounded-xl p-4 text-center space-y-3">
               {qrUrl ? (
@@ -293,6 +266,43 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
                 </Button>
               </div>
             </div>
+
+            {/* HTTPS Payment Link Container or Fallback */}
+            {isUpiAllowed ? (
+              httpsPayUrl && (
+                <div className="bg-slate-50 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] rounded-xl p-3.5 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-semibold text-slate-500 dark:text-[#a9b4c7] uppercase tracking-wider">
+                        Payment Link
+                      </p>
+                      <p
+                        className="font-mono text-xs text-indigo-600 dark:text-indigo-400 truncate select-all"
+                        data-testid="payment-link-url"
+                      >
+                        {httpsPayUrl}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={handleCopyLink}
+                      icon={copiedLink ? Check : Copy}
+                      className="min-h-[38px] shrink-0"
+                    >
+                      {copiedLink ? 'Copied' : 'Copy link'}
+                    </Button>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="bg-slate-50 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] rounded-xl p-3.5 text-center">
+                <p className="text-xs text-slate-600 dark:text-[#a9b4c7]">
+                  Payment link not available. Pay with the QR code or UPI ID above.
+                </p>
+              </div>
+            )}
 
             {/* WhatsApp Attachment Warning Note */}
             <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-xl flex items-start gap-2.5 text-blue-900 dark:text-blue-200 text-xs">

@@ -1319,6 +1319,9 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     expect(linkText.toLowerCase()).not.toContain('diya');
     expect(linkText.toLowerCase()).not.toContain('sharma');
 
+    // On allowlisted account, the fallback message is NOT shown
+    await expect(modal.locator('text=Payment link not available. Pay with the QR code or UPI ID above.')).toHaveCount(0);
+
     // Click "Copy link"
     const copyLinkBtn = modal.getByRole('button', { name: /Copy link/i });
     await expect(copyLinkBtn).toBeVisible();
@@ -1327,6 +1330,42 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
 
     // Close modal
     await modal.getByRole('button', { name: 'Close dialog' }).click();
+
+    // Non-allowlisted account: override academy_settings with a non-allowlisted UPI ID
+    await page.route('**/rest/v1/academy_settings**', async (route) => {
+      const isSingle = route.request().headers()['accept']?.includes('vnd.pgrst.object+json');
+      const unauthorizedAcademy = { ...MOCK_ACADEMY, upi_id: 'unauthorized@otherbank' };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(isSingle ? unauthorizedAcademy : [unauthorizedAcademy]),
+      });
+    });
+
+    // Re-open Payment Request modal for non-allowlisted account
+    await page.reload();
+    const reqBtnUnauth = page
+      .locator('tr:has-text("Diya Sharma"), div.p-4:has-text("Diya Sharma")')
+      .getByRole('button', { name: /Send payment request/i })
+      .filter({ visible: true })
+      .first();
+    await expect(reqBtnUnauth).toBeVisible({ timeout: 10000 });
+    await reqBtnUnauth.click({ force: true });
+
+    const unauthModal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(unauthModal).toBeVisible();
+
+    // Confirm fallback message appears and no payment link or copy link button is shown
+    await expect(unauthModal.locator('text=Payment link not available. Pay with the QR code or UPI ID above.')).toBeVisible();
+    await expect(unauthModal.locator('[data-testid="payment-link-url"]')).toHaveCount(0);
+    await expect(unauthModal.getByRole('button', { name: /Copy link/i })).toHaveCount(0);
+
+    // Confirm QR code and non-allowlisted UPI ID remain visible
+    await expect(unauthModal.locator('text=unauthorized@otherbank')).toBeVisible();
+    await expect(unauthModal.locator('img[alt="Academy UPI QR Code"]')).toBeVisible();
+
+    // Close modal
+    await unauthModal.getByRole('button', { name: 'Close dialog' }).click();
 
     // 2. Open the copied link in a new page (as specified by user prompt)
     const payPage = await page.context().newPage();
