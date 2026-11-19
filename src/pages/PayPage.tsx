@@ -124,7 +124,10 @@ export const PayPage: React.FC = () => {
               <div className="text-4xl font-extrabold text-indigo-600 dark:text-indigo-400 tracking-tight">
                 {formattedAmount}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 pt-1">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 pt-1">
+                Make sure the amount in your UPI app matches {formattedAmount}.
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Confirm the amount in your UPI app before paying.
               </p>
             </div>

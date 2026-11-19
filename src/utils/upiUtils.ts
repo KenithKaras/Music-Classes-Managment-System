@@ -24,6 +24,56 @@ export function validateUpiId(upiId: string): { isValid: boolean; error: string 
 }
 
 /**
+ * Retrieves the list of allowed academy UPI IDs from VITE_ALLOWED_UPI_IDS.
+ * Compares case-insensitively, exact match only.
+ * Fails closed: if VITE_ALLOWED_UPI_IDS is empty or missing, returns an empty array.
+ */
+export function getAllowedUpiIds(customAllowed?: string): string[] {
+  let envVal = '';
+  if (customAllowed !== undefined) {
+    envVal = customAllowed;
+  } else {
+    try {
+      envVal = import.meta.env.VITE_ALLOWED_UPI_IDS || '';
+    } catch {
+      envVal = (typeof process !== 'undefined' ? process.env?.VITE_ALLOWED_UPI_IDS : undefined) || '';
+    }
+  }
+
+  const raw = (envVal || '').trim();
+  if (!raw) {
+    let isDev = false;
+    try {
+      isDev = !!import.meta.env.DEV;
+    } catch {
+      isDev = typeof process !== 'undefined' && process.env.NODE_ENV !== 'production';
+    }
+    if (isDev) {
+      console.warn('VITE_ALLOWED_UPI_IDS is empty or missing. Rejecting payment link (fail closed).');
+    }
+    return [];
+  }
+
+  return raw
+    .split(',')
+    .map((id: string) => id.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * Checks if a given UPI ID is in the allowlist.
+ * Case-insensitive, exact match only.
+ * Fails closed if allowlist is empty.
+ */
+export function isUpiIdAllowed(upiId: string, customAllowed?: string): boolean {
+  const cleanId = (upiId || '').trim().toLowerCase();
+  if (!cleanId) return false;
+  const allowed = getAllowedUpiIds(customAllowed);
+  if (allowed.length === 0) return false; // fail closed
+  return allowed.includes(cleanId);
+}
+
+/**
  * Normalizes and caps Payee Name to 60 characters max.
  * Defaults to the academy name if empty.
  */
@@ -162,6 +212,7 @@ export interface BuildHttpsPaymentUrlParams {
   note?: string;
   tr?: string;
   origin?: string;
+  allowedUpiIds?: string;
 }
 
 /**
@@ -171,11 +222,11 @@ export interface BuildHttpsPaymentUrlParams {
  * Rejects if:
  * - balance is 0 or less
  * - amount exceeds 100,000.00
- * - UPI ID is missing or invalid
+ * - UPI ID is missing, invalid, or not in the VITE_ALLOWED_UPI_IDS allowlist
  * - note or reference fails format
  */
 export function buildHttpsPaymentUrl(params: BuildHttpsPaymentUrlParams): { url: string | null; error: string | null } {
-  const { amount, upiId, payeeName, billingMonth, note: customNote, tr: customTr, origin: customOrigin } = params;
+  const { amount, upiId, payeeName, billingMonth, note: customNote, tr: customTr, origin: customOrigin, allowedUpiIds } = params;
 
   // 1. Validate balance / amount
   if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
@@ -185,11 +236,14 @@ export function buildHttpsPaymentUrl(params: BuildHttpsPaymentUrlParams): { url:
     return { url: null, error: 'Amount exceeds maximum allowed limit of ₹1,00,000.00.' };
   }
 
-  // 2. Validate UPI ID
+  // 2. Validate UPI ID format and allowlist check (fails closed if allowlist empty/missing)
   const cleanUpi = (upiId || '').trim();
-  const upiCheck = /^[a-z0-9._-]+@[a-zA-Z]{2,64}$/.test(cleanUpi);
+  const upiCheck = /^[a-z0-9._-]+@[a-zA-Z]{2,64}$/i.test(cleanUpi);
   if (!upiCheck) {
     return { url: null, error: 'Valid UPI ID is required.' };
+  }
+  if (!isUpiIdAllowed(cleanUpi, allowedUpiIds)) {
+    return { url: null, error: 'UPI ID is not in the allowed list.' };
   }
 
   // 3. Validate Payee Name
@@ -236,9 +290,11 @@ export interface ValidatedPayParams {
 /**
  * Validates query parameters on the /pay page.
  * Reads ONLY pa, pn, am, tn, and tr. Ignores all other parameters.
+ * Rejects pa if not present in the VITE_ALLOWED_UPI_IDS allowlist (fail-closed).
  */
 export function validatePayPageParams(
-  params: URLSearchParams | Record<string, string | null | undefined>
+  params: URLSearchParams | Record<string, string | null | undefined>,
+  allowedUpiIds?: string
 ): { isValid: boolean; error: string | null; data?: ValidatedPayParams } {
   const getParam = (key: string): string => {
     if (params instanceof URLSearchParams) {
@@ -253,10 +309,13 @@ export function validatePayPageParams(
   const tn = getParam('tn');
   const tr = getParam('tr');
 
-  // Validate pa: valid UPI format
-  const upiRegex = /^[a-z0-9._-]+@[a-zA-Z]{2,64}$/;
+  // Validate pa: valid UPI format AND must match allowlist case-insensitively
+  const upiRegex = /^[a-z0-9._-]+@[a-zA-Z]{2,64}$/i;
   if (!pa || !upiRegex.test(pa)) {
     return { isValid: false, error: 'Invalid UPI ID format' };
+  }
+  if (!isUpiIdAllowed(pa, allowedUpiIds)) {
+    return { isValid: false, error: 'UPI ID is not in the allowed list' };
   }
 
   // Validate am: ^[0-9]+(\.[0-9]{2})?$ with max 100000.00 and > 0

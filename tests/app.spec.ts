@@ -1361,6 +1361,7 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     // Confirm payee name, amount, and button appear
     await expect(payPage.locator('h1', { hasText: 'MIX with Me Classes' })).toBeVisible();
     await expect(payPage.getByText('₹2,500.00', { exact: true })).toBeVisible();
+    await expect(payPage.locator('text=Make sure the amount in your UPI app matches ₹2,500.00.')).toBeVisible();
     await expect(payPage.locator('text=Confirm the amount in your UPI app before paying.')).toBeVisible();
     await expect(payPage.locator('text=Check that this UPI ID is the one you know for MIX with Me Classes before you pay.')).toBeVisible();
     await expect(payPage.locator('text=academy@okhdfcbank')).toBeVisible();
@@ -1411,10 +1412,16 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     await expect(payPage.locator('text=This payment link is not valid. Ask the academy for a new link.')).toBeVisible();
     await expect(payPage.getByRole('button', { name: /Pay/i })).toHaveCount(0);
 
-    // 7. Confirm /pay made ZERO requests to supabase.co
+    // 7. Open /pay with a UPI ID not in the allowlist - confirm invalid notice and NO button appears
+    const unauthorizedUpiPath = `/pay?pa=attacker@okhdfcbank&pn=Academy&am=1500.00&tn=Music%20fees%20Nov%202026&tr=ABCD1234EFGH5678`;
+    await payPage.goto(unauthorizedUpiPath);
+    await expect(payPage.locator('text=This payment link is not valid. Ask the academy for a new link.')).toBeVisible();
+    await expect(payPage.getByRole('button', { name: /Pay/i })).toHaveCount(0);
+
+    // 8. Confirm /pay made ZERO requests to supabase.co
     expect(paySupabaseRequests).toEqual([]);
 
-    // 8. Fail test on any console message containing "Content Security Policy"
+    // 9. Fail test on any console message containing "Content Security Policy"
     expect(payCspViolations).toEqual([]);
 
     await payPage.close();
