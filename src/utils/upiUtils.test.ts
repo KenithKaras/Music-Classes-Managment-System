@@ -8,6 +8,11 @@ import {
   dataUrlToBlob,
   cleanIndianPhoneNumber,
   buildPaymentRequestWhatsAppUrl,
+  generateRandomTr,
+  formatFeeNote,
+  buildHttpsPaymentUrl,
+  validatePayPageParams,
+  buildUpiAppLaunchUri,
 } from './upiUtils';
 import { calculateFeeBalance, getFeeStatus } from './feeUtils';
 
@@ -159,15 +164,17 @@ describe('UPI Utils - Validators, Encoders & Business Logic', () => {
         upiId: 'academy@okhdfcbank',
         dueDate: '5 Nov 2026',
         academyName: 'MIX with Me Classes',
+        paymentUrl: 'https://mix-with-me-classes.vercel.app/pay?pa=academy%40okhdfcbank&pn=MIX%20with%20Me%20Classes&am=2500.00&tn=Music%20fees%20Nov%202026&tr=ABCD1234EFGH5678',
       });
 
       expect(res.isPhoneValid).toBe(true);
       expect(res.url).toContain('https://wa.me/919876543210?text=');
       expect(res.message).toContain('Aarav Patel');
       expect(res.message).toContain('₹2,500');
-      expect(res.message).toContain('academy@okhdfcbank');
-      expect(res.message).toContain('5 Nov 2026');
-      expect(res.message).toContain('MIX with Me Classes');
+      expect(res.message).toContain('Pay here:\nhttps://mix-with-me-classes.vercel.app/pay?');
+      expect(res.message).toContain('UPI ID: academy@okhdfcbank');
+      expect(res.message).toContain('Kindly send the UPI transaction ID (UTR) after payment. Thank you!');
+      expect(res.message).not.toContain('upi://');
     });
   });
 
@@ -202,6 +209,264 @@ describe('UPI Utils - Validators, Encoders & Business Logic', () => {
       const blobRaw = dataUrlToBlob(rawBase64, 'image/png');
       expect(blobRaw.type).toBe('image/png');
       expect(blobRaw.size).toBe(4);
+    });
+  });
+
+  describe('Random Transaction Reference (tr) Generator', () => {
+    it('generates random uppercase alphanumeric strings between 12 and 20 chars', () => {
+      const tr1 = generateRandomTr(16);
+      const tr2 = generateRandomTr(16);
+
+      expect(tr1).toHaveLength(16);
+      expect(tr2).toHaveLength(16);
+      expect(tr1).not.toBe(tr2); // randomness
+      expect(/^[A-Z0-9]{16}$/.test(tr1)).toBe(true);
+      expect(/^[A-Z0-9]{16}$/.test(tr2)).toBe(true);
+
+      const minTr = generateRandomTr(12);
+      expect(minTr).toHaveLength(12);
+      expect(/^[A-Z0-9]{12}$/.test(minTr)).toBe(true);
+
+      const maxTr = generateRandomTr(20);
+      expect(maxTr).toHaveLength(20);
+      expect(/^[A-Z0-9]{20}$/.test(maxTr)).toBe(true);
+    });
+  });
+
+  describe('Fee Note Formatter', () => {
+    it('strictly formats billing month into "Music fees <Mon YYYY>" without student info', () => {
+      expect(formatFeeNote('2026-11-01')).toBe('Music fees Nov 2026');
+      expect(formatFeeNote('2026-01-15')).toBe('Music fees Jan 2026');
+      expect(formatFeeNote('2027-08-01')).toBe('Music fees Aug 2027');
+    });
+
+    it('falls back safely for invalid inputs', () => {
+      expect(formatFeeNote('')).toBe('Music fees');
+      expect(formatFeeNote('invalid-date')).toBe('Music fees');
+    });
+  });
+
+  describe('HTTPS Payment URL Builder (buildHttpsPaymentUrl)', () => {
+    it('builds a fully-encoded https payment URL with exactly two decimal amount', () => {
+      const res = buildHttpsPaymentUrl({
+        upiId: 'academy@okhdfcbank',
+        payeeName: 'MIX with Me Classes',
+        amount: 1500,
+        billingMonth: '2026-11-01',
+        tr: 'REF1234567890ABC',
+        origin: 'https://mix-with-me-classes.vercel.app',
+      });
+
+      expect(res.error).toBeNull();
+      expect(res.url).toBe(
+        'https://mix-with-me-classes.vercel.app/pay?pa=academy%40okhdfcbank&pn=MIX%20with%20Me%20Classes&am=1500.00&tn=Music%20fees%20Nov%202026&tr=REF1234567890ABC'
+      );
+    });
+
+    it('formats decimal amounts with two decimal places', () => {
+      const res = buildHttpsPaymentUrl({
+        upiId: 'academy@okhdfcbank',
+        payeeName: 'MIX with Me Classes',
+        amount: 1750.5,
+        billingMonth: '2026-11-01',
+        tr: 'REF1234567890ABC',
+      });
+
+      expect(res.error).toBeNull();
+      expect(res.url).toContain('&am=1750.50&');
+    });
+
+    it('rejects balance <= 0 (e.g. 0 or negative)', () => {
+      const res0 = buildHttpsPaymentUrl({
+        upiId: 'academy@okhdfcbank',
+        payeeName: 'MIX with Me Classes',
+        amount: 0,
+        billingMonth: '2026-11-01',
+      });
+      expect(res0.url).toBeNull();
+      expect(res0.error).toBeTruthy();
+
+      const resNeg = buildHttpsPaymentUrl({
+        upiId: 'academy@okhdfcbank',
+        payeeName: 'MIX with Me Classes',
+        amount: -500,
+        billingMonth: '2026-11-01',
+      });
+      expect(resNeg.url).toBeNull();
+      expect(resNeg.error).toBeTruthy();
+    });
+
+    it('rejects amount > 100,000.00', () => {
+      const res = buildHttpsPaymentUrl({
+        upiId: 'academy@okhdfcbank',
+        payeeName: 'MIX with Me Classes',
+        amount: 100000.01,
+        billingMonth: '2026-11-01',
+      });
+      expect(res.url).toBeNull();
+      expect(res.error).toBeTruthy();
+    });
+
+    it('rejects invalid or missing UPI ID', () => {
+      const resEmpty = buildHttpsPaymentUrl({
+        upiId: '',
+        payeeName: 'MIX with Me Classes',
+        amount: 1500,
+        billingMonth: '2026-11-01',
+      });
+      expect(resEmpty.url).toBeNull();
+      expect(resEmpty.error).toBeTruthy();
+
+      const resEvil = buildHttpsPaymentUrl({
+        upiId: 'http://evil.com',
+        payeeName: 'MIX with Me Classes',
+        amount: 1500,
+        billingMonth: '2026-11-01',
+      });
+      expect(resEvil.url).toBeNull();
+      expect(resEvil.error).toBeTruthy();
+    });
+
+    it('rejects invalid note format', () => {
+      const res = buildHttpsPaymentUrl({
+        upiId: 'academy@okhdfcbank',
+        payeeName: 'MIX with Me Classes',
+        amount: 1500,
+        note: 'Student fee for Aarav Patel', // Contains student name!
+      });
+      expect(res.url).toBeNull();
+      expect(res.error).toBeTruthy();
+    });
+
+    it('rejects invalid transaction reference (tr)', () => {
+      const resShort = buildHttpsPaymentUrl({
+        upiId: 'academy@okhdfcbank',
+        payeeName: 'MIX with Me Classes',
+        amount: 1500,
+        billingMonth: '2026-11-01',
+        tr: 'TOO_SHORT', // < 12 chars
+      });
+      expect(resShort.url).toBeNull();
+      expect(resShort.error).toBeTruthy();
+
+      const resSpecial = buildHttpsPaymentUrl({
+        upiId: 'academy@okhdfcbank',
+        payeeName: 'MIX with Me Classes',
+        amount: 1500,
+        billingMonth: '2026-11-01',
+        tr: 'INVALID-TR-CHARS!',
+      });
+      expect(resSpecial.url).toBeNull();
+      expect(resSpecial.error).toBeTruthy();
+    });
+  });
+
+  describe('Payment Page Parameter Validator (validatePayPageParams)', () => {
+    it('accepts valid parameters and ignores extra unallowed parameters', () => {
+      const params = new URLSearchParams(
+        'pa=academy@okhdfcbank&pn=MIX%20with%20Me%20Classes&am=1500.00&tn=Music%20fees%20Nov%202026&tr=ABC123DEF4567890&student_id=999&phone=9876543210'
+      );
+      const res = validatePayPageParams(params);
+
+      expect(res.isValid).toBe(true);
+      expect(res.error).toBeNull();
+      expect(res.data).toEqual({
+        upiId: 'academy@okhdfcbank',
+        payeeName: 'MIX with Me Classes',
+        amount: '1500.00',
+        note: 'Music fees Nov 2026',
+        tr: 'ABC123DEF4567890',
+      });
+      // Extra params like student_id or phone must be ignored
+      expect((res.data as any).student_id).toBeUndefined();
+      expect((res.data as any).phone).toBeUndefined();
+    });
+
+    it('rejects invalid UPI ID (pa)', () => {
+      expect(validatePayPageParams({ pa: 'http://evil', pn: 'Academy', am: '100.00', tn: 'Music fees Nov 2026', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+      expect(validatePayPageParams({ pa: 'javascript:alert(1)', pn: 'Academy', am: '100.00', tn: 'Music fees Nov 2026', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+      expect(validatePayPageParams({ pa: '', pn: 'Academy', am: '100.00', tn: 'Music fees Nov 2026', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+      expect(validatePayPageParams({ pa: 'teacher@', pn: 'Academy', am: '100.00', tn: 'Music fees Nov 2026', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+    });
+
+    it('rejects invalid amount (am)', () => {
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: '0', tn: 'Note', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: '0.00', tn: 'Note', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: '-10.00', tn: 'Note', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: '100000.01', tn: 'Note', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: '1500.123', tn: 'Note', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: 'abc', tn: 'Note', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+    });
+
+    it('rejects invalid payee name (pn) or note (tn)', () => {
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: '', am: '100.00', tn: 'Note', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'A'.repeat(61), am: '100.00', tn: 'Note', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: '100.00', tn: '', tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: '100.00', tn: 'A'.repeat(81), tr: 'ABC123DEF4567890' }).isValid).toBe(false);
+    });
+
+    it('rejects invalid transaction reference (tr)', () => {
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: '100.00', tn: 'Note', tr: 'ABC' }).isValid).toBe(false); // too short
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: '100.00', tn: 'Note', tr: 'A'.repeat(21) }).isValid).toBe(false); // too long
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: '100.00', tn: 'Note', tr: 'abc123def4567890' }).isValid).toBe(false); // lowercase
+      expect(validatePayPageParams({ pa: 'academy@sbi', pn: 'Academy', am: '100.00', tn: 'Note', tr: 'ABC_123-DEF_4567' }).isValid).toBe(false); // special symbols
+    });
+  });
+
+  describe('UPI App Launch URI Builder (buildUpiAppLaunchUri)', () => {
+    it('builds canonical upi:// URL containing no unencoded spaces or quotes', () => {
+      const uri = buildUpiAppLaunchUri({
+        upiId: 'academy@okhdfcbank',
+        payeeName: 'MIX with Me "Classes"',
+        amount: '1500.00',
+        note: 'Music fees Nov 2026',
+        tr: 'REF1234567890ABC',
+      });
+
+      expect(uri.startsWith('upi://pay?')).toBe(true);
+      expect(uri).not.toContain(' ');
+      expect(uri).not.toContain('"');
+      expect(uri).not.toContain("'");
+      expect(uri).toContain('pa=academy%40okhdfcbank');
+      expect(uri).toContain('pn=MIX%20with%20Me%20%22Classes%22');
+      expect(uri).toContain('am=1500.00');
+      expect(uri).toContain('cu=INR');
+      expect(uri).toContain('tn=Music%20fees%20Nov%202026');
+      expect(uri).toContain('tr=REF1234567890ABC');
+    });
+
+    it('strictly prevents redirect to non-UPI schemes', () => {
+      const testCases = [
+        'javascript:alert(1)',
+        'http://attacker.com',
+        'https://malicious.org',
+        'data:text/html,<h1>evil</h1>',
+      ];
+
+      for (const evil of testCases) {
+        // 1. Validator rejects it on /pay page
+        const validation = validatePayPageParams({
+          pa: evil,
+          pn: 'Academy',
+          am: '100.00',
+          tn: 'Note',
+          tr: 'ABC123DEF4567890',
+        });
+        expect(validation.isValid).toBe(false);
+
+        // 2. Even if passed to builder, resulting URI always begins with upi://pay?
+        const built = buildUpiAppLaunchUri({
+          upiId: evil,
+          payeeName: 'Academy',
+          amount: '100.00',
+          note: 'Note',
+          tr: 'ABC123DEF4567890',
+        });
+        expect(built.startsWith('upi://pay?')).toBe(true);
+        expect(built.startsWith('javascript:')).toBe(false);
+        expect(built.startsWith('http:')).toBe(false);
+        expect(built.startsWith('https:')).toBe(false);
+      }
     });
   });
 });

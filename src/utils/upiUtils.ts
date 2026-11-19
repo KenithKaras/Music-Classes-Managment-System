@@ -125,7 +125,205 @@ export function cleanIndianPhoneNumber(phone: string | null | undefined): string
 }
 
 /**
+ * Generates a cryptographically random transaction reference (tr) parameter.
+ * Length: 12 to 20 uppercase alphanumeric characters (NPCI format).
+ * Does not derive from student or fee ID.
+ */
+export function generateRandomTr(length = 16): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const validLen = Math.min(20, Math.max(12, length));
+  const array = new Uint8Array(validLen);
+  crypto.getRandomValues(array);
+  return Array.from(array, (byte) => chars[byte % chars.length]).join('');
+}
+
+/**
+ * Formats a fee note strictly conforming to: "Music fees <Mon YYYY>" (e.g. "Music fees Nov 2026").
+ * Never includes student's name, phone, or ID.
+ */
+export function formatFeeNote(billingMonthStr: string): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const parts = (billingMonthStr || '').split('-');
+  if (parts.length >= 2) {
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    if (monthIdx >= 0 && monthIdx < 12 && /^\d{4}$/.test(year)) {
+      return `Music fees ${months[monthIdx]} ${year}`;
+    }
+  }
+  return 'Music fees';
+}
+
+export interface BuildHttpsPaymentUrlParams {
+  upiId: string;
+  payeeName: string;
+  amount: number;
+  billingMonth?: string;
+  note?: string;
+  tr?: string;
+  origin?: string;
+}
+
+/**
+ * Builds the per-request HTTPS payment URL:
+ * https://<origin>/pay?pa=<UPI ID>&pn=<payee name>&am=<balance>&tn=<note>&tr=<reference>
+ * 
+ * Rejects if:
+ * - balance is 0 or less
+ * - amount exceeds 100,000.00
+ * - UPI ID is missing or invalid
+ * - note or reference fails format
+ */
+export function buildHttpsPaymentUrl(params: BuildHttpsPaymentUrlParams): { url: string | null; error: string | null } {
+  const { amount, upiId, payeeName, billingMonth, note: customNote, tr: customTr, origin: customOrigin } = params;
+
+  // 1. Validate balance / amount
+  if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
+    return { url: null, error: 'Amount must be greater than zero.' };
+  }
+  if (amount > 100000) {
+    return { url: null, error: 'Amount exceeds maximum allowed limit of ₹1,00,000.00.' };
+  }
+
+  // 2. Validate UPI ID
+  const cleanUpi = (upiId || '').trim();
+  const upiCheck = /^[a-z0-9._-]+@[a-zA-Z]{2,64}$/.test(cleanUpi);
+  if (!upiCheck) {
+    return { url: null, error: 'Valid UPI ID is required.' };
+  }
+
+  // 3. Validate Payee Name
+  const cleanPayee = (payeeName || '').trim().slice(0, 60);
+  if (!cleanPayee) {
+    return { url: null, error: 'Payee name is required.' };
+  }
+
+  // 4. Resolve and Validate Note
+  const note = customNote || (billingMonth ? formatFeeNote(billingMonth) : '');
+  const noteRegex = /^Music fees [A-Za-z]{3} \d{4}$/;
+  if (!noteRegex.test(note) || note.length > 80) {
+    return { url: null, error: 'Note must be in the format "Music fees <Mon YYYY>".' };
+  }
+
+  // 5. Resolve and Validate Reference (tr)
+  const tr = customTr || generateRandomTr(16);
+  const trRegex = /^[A-Z0-9]{12,20}$/;
+  if (!trRegex.test(tr)) {
+    return { url: null, error: 'Transaction reference must be 12 to 20 uppercase alphanumeric characters.' };
+  }
+
+  // 6. Resolve Origin
+  const envOrigin = typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_PUBLIC_APP_URL : undefined;
+  const processOrigin = typeof process !== 'undefined' ? process.env?.VITE_PUBLIC_APP_URL : undefined;
+  const rawOrigin = customOrigin || envOrigin || processOrigin || 'https://mix-with-me-classes.vercel.app';
+  const cleanOrigin = rawOrigin.trim().replace(/\/+$/, '');
+
+  const amFormatted = amount.toFixed(2);
+
+  const url = `${cleanOrigin}/pay?pa=${encodeURIComponent(cleanUpi)}&pn=${encodeURIComponent(cleanPayee)}&am=${encodeURIComponent(amFormatted)}&tn=${encodeURIComponent(note)}&tr=${encodeURIComponent(tr)}`;
+
+  return { url, error: null };
+}
+
+export interface ValidatedPayParams {
+  upiId: string;
+  payeeName: string;
+  amount: string;
+  note: string;
+  tr: string;
+}
+
+/**
+ * Validates query parameters on the /pay page.
+ * Reads ONLY pa, pn, am, tn, and tr. Ignores all other parameters.
+ */
+export function validatePayPageParams(
+  params: URLSearchParams | Record<string, string | null | undefined>
+): { isValid: boolean; error: string | null; data?: ValidatedPayParams } {
+  const getParam = (key: string): string => {
+    if (params instanceof URLSearchParams) {
+      return (params.get(key) || '').trim();
+    }
+    return ((params && params[key]) || '').trim();
+  };
+
+  const pa = getParam('pa');
+  const pn = getParam('pn');
+  const am = getParam('am');
+  const tn = getParam('tn');
+  const tr = getParam('tr');
+
+  // Validate pa: valid UPI format
+  const upiRegex = /^[a-z0-9._-]+@[a-zA-Z]{2,64}$/;
+  if (!pa || !upiRegex.test(pa)) {
+    return { isValid: false, error: 'Invalid UPI ID format' };
+  }
+
+  // Validate am: ^[0-9]+(\.[0-9]{2})?$ with max 100000.00 and > 0
+  const amRegex = /^[0-9]+(\.[0-9]{2})?$/;
+  if (!am || !amRegex.test(am)) {
+    return { isValid: false, error: 'Invalid amount format' };
+  }
+  const numAm = parseFloat(am);
+  if (isNaN(numAm) || numAm <= 0 || numAm > 100000.0) {
+    return { isValid: false, error: 'Amount out of valid range' };
+  }
+
+  // Validate pn: up to 60 chars, non-empty
+  if (!pn || pn.length > 60) {
+    return { isValid: false, error: 'Invalid payee name' };
+  }
+
+  // Validate tn: up to 80 chars, non-empty
+  if (!tn || tn.length > 80) {
+    return { isValid: false, error: 'Invalid note' };
+  }
+
+  // Validate tr: ^[A-Z0-9]{12,20}$
+  const trRegex = /^[A-Z0-9]{12,20}$/;
+  if (!tr || !trRegex.test(tr)) {
+    return { isValid: false, error: 'Invalid reference format' };
+  }
+
+  return {
+    isValid: true,
+    error: null,
+    data: {
+      upiId: pa,
+      payeeName: pn,
+      amount: am,
+      note: tn,
+      tr,
+    },
+  };
+}
+
+/**
+ * Builds the upi://pay launch URI from validated parameters using encodeURIComponent.
+ * Guaranteed to start with upi://pay?, containing no unencoded spaces or quotes,
+ * and producing no non-UPI redirect.
+ */
+export function buildUpiAppLaunchUri(params: {
+  upiId: string;
+  payeeName: string;
+  amount: string;
+  note: string;
+  tr: string;
+}): string {
+  const cleanPa = encodeURIComponent(params.upiId.trim());
+  const cleanPn = encodeURIComponent(params.payeeName.trim().slice(0, 60));
+  const cleanAm = encodeURIComponent(params.amount.trim());
+  const cleanTn = encodeURIComponent(params.note.trim().slice(0, 80));
+  const cleanTr = encodeURIComponent(params.tr.trim());
+
+  return `upi://pay?pa=${cleanPa}&pn=${cleanPn}&am=${cleanAm}&cu=INR&tn=${cleanTn}&tr=${cleanTr}`;
+}
+
+/**
  * Builds the WhatsApp payment request message and wa.me link.
+ * Places the https link on its own line after "Pay here:".
+ * Does NOT put any upi:// link in the message.
+ * Keeps UPI ID line and "send the UTR after paying" line.
  */
 export function buildPaymentRequestWhatsAppUrl(params: {
   phone: string;
@@ -134,11 +332,23 @@ export function buildPaymentRequestWhatsAppUrl(params: {
   upiId: string;
   dueDate: string;
   academyName: string;
+  paymentUrl?: string | null;
 }): { url: string | null; message: string; isPhoneValid: boolean } {
   const cleanDigits = cleanIndianPhoneNumber(params.phone);
   const formattedBalance = formatIndianCurrency(params.balanceDue);
 
-  const message = `Hello, this is a payment request from ${params.academyName}. Balance due for ${params.studentName} is ${formattedBalance}, due by ${params.dueDate}. Please scan our academy UPI QR or pay directly to UPI ID: ${params.upiId}. Kindly send the UPI transaction ID (UTR) after payment. Thank you!`;
+  const lines = [
+    `Hello, this is a payment request from ${params.academyName}. Balance due for ${params.studentName} is ${formattedBalance}, due by ${params.dueDate}.`,
+  ];
+
+  if (params.paymentUrl) {
+    lines.push(`Pay here:\n${params.paymentUrl}`);
+  }
+
+  lines.push(`UPI ID: ${params.upiId}`);
+  lines.push('Kindly send the UPI transaction ID (UTR) after payment. Thank you!');
+
+  const message = lines.join('\n');
 
   if (!cleanDigits) {
     return {

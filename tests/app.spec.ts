@@ -1263,4 +1263,160 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     // Assert zero CSP violations
     expect(cspViolations).toEqual([]);
   });
+
+  // ----------------------------------------------------------------------------
+  // 17. HTTPS PAYMENT LINK & /pay PAGE
+  // ----------------------------------------------------------------------------
+  test('17. HTTPS Payment Link & /pay Page: link generation, parameter validation, UPI launch, XSS safety, and zero Supabase calls', async ({ page }) => {
+    const cspViolations: string[] = [];
+    page.on('console', (msg) => {
+      const text = msg.text();
+      if (text.includes('Content Security Policy')) {
+        cspViolations.push(text);
+      }
+    });
+
+    let dialogTriggered = false;
+    page.on('dialog', async (dialog) => {
+      dialogTriggered = true;
+      await dialog.dismiss();
+    });
+
+    const supabaseRequests: string[] = [];
+    page.on('request', (req) => {
+      const url = req.url();
+      if (url.includes('supabase.co')) {
+        supabaseRequests.push(url);
+      }
+    });
+
+    // 1. Generate payment request on /fees and copy https link
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+    await setupMockSessionAndRoutes(page, 'light');
+    await page.goto('/fees');
+    await expect(page.locator('h1', { hasText: 'Fees & Payments' })).toBeVisible();
+
+    const reqBtn = page
+      .locator('tr:has-text("Diya Sharma"), div.p-4:has-text("Diya Sharma")')
+      .getByRole('button', { name: /Send payment request/i })
+      .filter({ visible: true })
+      .first();
+    await expect(reqBtn).toBeVisible({ timeout: 10000 });
+    await reqBtn.scrollIntoViewIfNeeded();
+    await reqBtn.click({ force: true });
+
+    const modal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('h3', { hasText: 'Payment Request' })).toBeVisible();
+
+    // Verify payment link element
+    const linkEl = modal.locator('[data-testid="payment-link-url"]');
+    await expect(linkEl).toBeVisible();
+    const linkText = (await linkEl.innerText()).trim();
+
+    // Confirm it starts with https:// and contains no student name
+    expect(linkText.startsWith('https://')).toBe(true);
+    expect(linkText.toLowerCase()).not.toContain('diya');
+    expect(linkText.toLowerCase()).not.toContain('sharma');
+
+    // Click "Copy link"
+    const copyLinkBtn = modal.getByRole('button', { name: /Copy link/i });
+    await expect(copyLinkBtn).toBeVisible();
+    await copyLinkBtn.click();
+    await expect(modal.getByRole('button', { name: 'Copied' })).toBeVisible();
+
+    // Close modal
+    await modal.getByRole('button', { name: 'Close dialog' }).click();
+
+    // 2. Open the copied link in a new page (as specified by user prompt)
+    const payPage = await page.context().newPage();
+
+    const payCspViolations: string[] = [];
+    payPage.on('console', (msg) => {
+      const text = msg.text();
+      if (text.includes('Content Security Policy')) {
+        payCspViolations.push(text);
+      }
+    });
+
+    let payDialogTriggered = false;
+    payPage.on('dialog', async (dialog) => {
+      payDialogTriggered = true;
+      await dialog.dismiss();
+    });
+
+    const paySupabaseRequests: string[] = [];
+    payPage.on('request', (req) => {
+      const url = req.url();
+      if (url.includes('supabase.co')) {
+        paySupabaseRequests.push(url);
+      }
+    });
+
+    const urlObj = new URL(linkText);
+    const payPath = urlObj.pathname + urlObj.search;
+
+    await payPage.goto(payPath);
+
+    // Confirm payee name, amount, and button appear
+    await expect(payPage.locator('h1', { hasText: 'MIX with Me Classes' })).toBeVisible();
+    await expect(payPage.getByText('₹2,500.00', { exact: true })).toBeVisible();
+    await expect(payPage.locator('text=Confirm the amount in your UPI app before paying.')).toBeVisible();
+    await expect(payPage.locator('text=Check that this UPI ID is the one you know for MIX with Me Classes before you pay.')).toBeVisible();
+    await expect(payPage.locator('text=academy@okhdfcbank')).toBeVisible();
+
+    const payBtn = payPage.getByRole('button', { name: 'Pay ₹2,500.00 with UPI' });
+    await expect(payBtn).toBeVisible();
+
+    const copyUpiBtn = payPage.getByRole('button', { name: 'Copy UPI ID' });
+    await expect(copyUpiBtn).toBeVisible();
+    await expect(payPage.locator('text=If nothing opens, copy the UPI ID and pay from your UPI app.')).toBeVisible();
+
+    // 3. Click the button and confirm the navigation target starts with upi://pay?
+    let upiNavigationTarget = '';
+    payPage.on('request', (req) => {
+      if (req.url().startsWith('upi://pay?')) {
+        upiNavigationTarget = req.url();
+      }
+    });
+
+    try {
+      await payBtn.click({ timeout: 5000 });
+    } catch {
+      // Handle external scheme cancellation in browser
+    }
+    await payPage.waitForTimeout(500);
+
+    expect(upiNavigationTarget.startsWith('upi://pay?')).toBe(true);
+    expect(upiNavigationTarget).toContain('pa=academy%40okhdfcbank');
+    expect(upiNavigationTarget).toContain('am=2500.00');
+    expect(upiNavigationTarget).toContain('cu=INR');
+
+    // 4. Test dark theme support on /pay
+    await payPage.emulateMedia({ colorScheme: 'dark' });
+    await payPage.goto(payPath);
+    await expect(payPage.locator('h1', { hasText: 'MIX with Me Classes' })).toBeVisible();
+    await expect(payPage.getByText('₹2,500.00', { exact: true })).toBeVisible();
+    await expect(payPage.getByRole('button', { name: 'Pay ₹2,500.00 with UPI' })).toBeVisible();
+
+    // 5. Open /pay with pn=<script>alert(1)</script> - confirm no dialog opens and text renders as plain text
+    const xssPath = `/pay?pa=academy@okhdfcbank&pn=${encodeURIComponent('<script>alert(1)</script>')}&am=1500.00&tn=Music%20fees%20Nov%202026&tr=ABCD1234EFGH5678`;
+    await payPage.goto(xssPath);
+    expect(payDialogTriggered).toBe(false);
+    await expect(payPage.locator('h1', { hasText: '<script>alert(1)</script>' })).toBeVisible();
+
+    // 6. Open /pay with pa=http://evil - confirm invalid notice and NO button appears
+    const evilPath = `/pay?pa=${encodeURIComponent('http://evil')}&pn=Academy&am=1500.00&tn=Music%20fees%20Nov%202026&tr=ABCD1234EFGH5678`;
+    await payPage.goto(evilPath);
+    await expect(payPage.locator('text=This payment link is not valid. Ask the academy for a new link.')).toBeVisible();
+    await expect(payPage.getByRole('button', { name: /Pay/i })).toHaveCount(0);
+
+    // 7. Confirm /pay made ZERO requests to supabase.co
+    expect(paySupabaseRequests).toEqual([]);
+
+    // 8. Fail test on any console message containing "Content Security Policy"
+    expect(payCspViolations).toEqual([]);
+
+    await payPage.close();
+  });
 });

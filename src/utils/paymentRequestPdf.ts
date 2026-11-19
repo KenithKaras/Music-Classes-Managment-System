@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import type { AcademySettings } from '../types';
 import { formatIndianCurrency, formatBillingMonth } from './feeUtils';
 import { loadImageAsBase64 } from './receiptPdf';
+import { generateUpiQrDataUrl } from './upiUtils';
 
 export interface GeneratePaymentRequestPdfParams {
   studentName: string;
@@ -11,11 +12,13 @@ export interface GeneratePaymentRequestPdfParams {
   academySettings?: AcademySettings | null;
   qrDataUrl?: string | null;
   upiId?: string | null;
+  paymentUrl?: string | null;
 }
 
 /**
  * Generates an official, high-contrast, professional A5 Payment Request PDF.
- * Note: Static QR does not encode amount; amount is boldly specified in text.
+ * Dynamic QR encodes the HTTPS payment link, with saved QR as fallback.
+ * Includes a clickable link annotation pointing to the HTTPS link.
  */
 export async function generatePaymentRequestPdf(
   params: GeneratePaymentRequestPdfParams
@@ -28,6 +31,7 @@ export async function generatePaymentRequestPdf(
     academySettings,
     qrDataUrl,
     upiId,
+    paymentUrl,
   } = params;
 
   const doc = new jsPDF({
@@ -137,8 +141,18 @@ export async function generatePaymentRequestPdf(
   currentY += 18;
 
   // 4. UPI QR Code Section (Center)
-  const effectiveUpi = upiId || academySettings?.upi_id || 'Not configured';
-  let qrBase64 = qrDataUrl;
+  // Dynamic QR encodes the HTTPS payment link, with saved QR as fallback
+  let qrBase64: string | null = null;
+  if (paymentUrl) {
+    try {
+      qrBase64 = await generateUpiQrDataUrl(paymentUrl);
+    } catch {
+      // Dynamic QR fallback
+    }
+  }
+  if (!qrBase64 && qrDataUrl) {
+    qrBase64 = qrDataUrl;
+  }
   if (!qrBase64 && academySettings?.upi_qr_path) {
     qrBase64 = await loadImageAsBase64(academySettings.upi_qr_path);
   }
@@ -155,18 +169,35 @@ export async function generatePaymentRequestPdf(
   }
 
   // UPI ID Text
+  const effectiveUpi = upiId || academySettings?.upi_id || 'Not configured';
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(15, 23, 42);
   doc.text(`UPI ID: ${effectiveUpi}`, pageWidth / 2, currentY, { align: 'center' });
-  currentY += 6;
+  currentY += 5;
+
+  // Clickable HTTPS payment link annotation
+  if (paymentUrl) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(79, 70, 229); // indigo-600
+    const linkText = `Pay online: ${paymentUrl}`;
+    const textWidth = doc.getTextWidth(linkText);
+    const linkX = Math.max(margin, (pageWidth - Math.min(textWidth, contentWidth)) / 2);
+    const linkY = currentY;
+    doc.textWithLink(linkText, linkX, linkY, { url: paymentUrl });
+    doc.link(margin, linkY - 3, contentWidth, 5, { url: paymentUrl });
+    currentY += 6;
+  } else {
+    currentY += 2;
+  }
 
   // 5. Instruction line required by spec
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(71, 85, 105);
   const instruction =
-    'Scan with any UPI app and enter the amount shown above. Send the transaction ID to the academy after paying.';
+    'Scan with any UPI app or tap the payment link above. Send the transaction ID to the academy after paying.';
   const splitInstruction = doc.splitTextToSize(instruction, contentWidth - 4);
   doc.text(splitInstruction, pageWidth / 2, currentY, { align: 'center' });
 

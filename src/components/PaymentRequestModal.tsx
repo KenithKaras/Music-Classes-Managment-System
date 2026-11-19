@@ -18,6 +18,7 @@ import { formatIndianCurrency, formatBillingMonth } from '../utils/feeUtils';
 import {
   buildPaymentRequestWhatsAppUrl,
   cleanIndianPhoneNumber,
+  buildHttpsPaymentUrl,
 } from '../utils/upiUtils';
 import { downloadPaymentRequestPdf } from '../utils/paymentRequestPdf';
 
@@ -39,6 +40,7 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
   const [settings, setSettings] = useState<AcademySettings | null>(propSettings || null);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   useEffect(() => {
@@ -71,6 +73,16 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
     : '';
   const isUpiConfigured = Boolean(upiId);
 
+  // Per-request HTTPS payment URL
+  const { url: httpsPayUrl } = isUpiConfigured
+    ? buildHttpsPaymentUrl({
+        upiId,
+        payeeName: academyName,
+        amount: balanceDue,
+        billingMonth: fee.billing_month,
+      })
+    : { url: null };
+
   // Phone resolution
   const targetPhone =
     effectiveStudent.guardian_phone || effectiveStudent.phone || '';
@@ -84,26 +96,47 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
     upiId,
     dueDate: fee.due_date,
     academyName,
+    paymentUrl: httpsPayUrl,
   });
 
   const handleCopyUpi = async () => {
     if (!upiId) return;
     try {
-      await navigator.clipboard.writeText(upiId);
-      setCopiedUpi(true);
-      setTimeout(() => setCopiedUpi(false), 2000);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(upiId);
+      }
     } catch {
       // clipboard fallback
+    } finally {
+      setCopiedUpi(true);
+      setTimeout(() => setCopiedUpi(false), 2000);
     }
   };
 
   const handleCopyAmount = async () => {
     try {
-      await navigator.clipboard.writeText(String(balanceDue));
-      setCopiedAmount(true);
-      setTimeout(() => setCopiedAmount(false), 2000);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(String(balanceDue));
+      }
     } catch {
       // clipboard fallback
+    } finally {
+      setCopiedAmount(true);
+      setTimeout(() => setCopiedAmount(false), 2000);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!httpsPayUrl) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(httpsPayUrl);
+      }
+    } catch {
+      // clipboard fallback
+    } finally {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
     }
   };
 
@@ -117,6 +150,7 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
         dueDate: fee.due_date,
         academySettings: settings,
         upiId,
+        paymentUrl: httpsPayUrl,
       });
     } finally {
       setIsDownloadingPdf(false);
@@ -186,7 +220,7 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
                   <button
                     type="button"
                     onClick={handleCopyAmount}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-300 dark:border-[#26324a] bg-white dark:bg-[#101726] text-[11px] font-medium text-slate-700 dark:text-[#f1f5f9] hover:bg-slate-50 dark:hover:bg-slate-800"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-300 dark:border-[#26324a] bg-white dark:bg-[#101726] text-[11px] font-medium text-slate-700 dark:text-[#f1f5f9] hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                     title="Copy exact amount"
                   >
                     {copiedAmount ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
@@ -195,6 +229,35 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* HTTPS Payment Link Container */}
+            {httpsPayUrl && (
+              <div className="bg-slate-50 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] rounded-xl p-3.5 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-[#a9b4c7] uppercase tracking-wider">
+                      Payment Link
+                    </p>
+                    <p
+                      className="font-mono text-xs text-indigo-600 dark:text-indigo-400 truncate select-all"
+                      data-testid="payment-link-url"
+                    >
+                      {httpsPayUrl}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={handleCopyLink}
+                    icon={copiedLink ? Check : Copy}
+                    className="min-h-[38px] shrink-0"
+                  >
+                    {copiedLink ? 'Copied' : 'Copy link'}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* QR Code and UPI ID Container */}
             <div className="bg-white dark:bg-[#101726] border border-slate-200 dark:border-[#26324a] rounded-xl p-4 text-center space-y-3">

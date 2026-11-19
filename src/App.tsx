@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -32,6 +32,7 @@ const FeesPage = React.lazy(() => import('./pages/FeesPage').then((m) => ({ defa
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const BackupsPage = React.lazy(() => import('./pages/BackupsPage').then((m) => ({ default: m.BackupsPage })));
 const ExportsPage = React.lazy(() => import('./pages/ExportsPage').then((m) => ({ default: m.ExportsPage })));
+const PayPage = React.lazy(() => import('./pages/PayPage').then((m) => ({ default: m.PayPage })));
 
 const PageFallback: React.FC = () => (
   <div className="p-6 max-w-7xl mx-auto space-y-4">
@@ -58,16 +59,30 @@ const RootRoute: React.FC = () => {
   return <LandingPage />;
 };
 
+// Authenticated layout wrapper for app routes (includes AuthProvider, ToastProvider, and InactivityModal)
+const AuthAppLayout: React.FC = () => (
+  <AuthProvider>
+    <ToastProvider>
+      <InactivityWarningModal />
+      <Suspense fallback={<PageFallback />}>
+        <Outlet />
+      </Suspense>
+    </ToastProvider>
+  </AuthProvider>
+);
+
 export const App: React.FC = () => {
-  // Missing environment variables screen on startup
-  if (missingEnvVars.length > 0) {
+  const isPayPath = typeof window !== 'undefined' && window.location.pathname === '/pay';
+
+  // Missing environment variables screen on startup (bypassed on public /pay route)
+  if (!isPayPath && missingEnvVars.length > 0) {
     return <SetupErrorScreen missingVars={missingEnvVars} />;
   }
 
   const [schemaResult, setSchemaResult] = useState<SchemaValidationResult | null>(null);
 
   const runSchemaCheck = async () => {
-    if (import.meta.env.DEV) {
+    if (import.meta.env.DEV && !isPayPath) {
       const res = await validateDatabaseSchema();
       if (!res.isValid) {
         setSchemaResult(res);
@@ -78,10 +93,12 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
-    runSchemaCheck();
-  }, []);
+    if (!isPayPath) {
+      runSchemaCheck();
+    }
+  }, [isPayPath]);
 
-  if (import.meta.env.DEV && schemaResult && !schemaResult.isValid) {
+  if (import.meta.env.DEV && !isPayPath && schemaResult && !schemaResult.isValid) {
     return <SchemaErrorScreen schemaResult={schemaResult} onRetry={runSchemaCheck} />;
   }
 
@@ -90,49 +107,55 @@ export const App: React.FC = () => {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ThemeProvider>
-            <AuthProvider>
-              <ToastProvider>
-                <InactivityWarningModal />
-                <Suspense fallback={<PageFallback />}>
-                  <Routes>
-                    {/* Public Root: Landing page when logged out, redirects to /dashboard when logged in */}
-                    <Route path="/" element={<RootRoute />} />
+            <Routes>
+              {/* Public Standalone /pay Route: completely outside AuthProvider, no Supabase, no storage */}
+              <Route
+                path="/pay"
+                element={
+                  <Suspense fallback={<PageFallback />}>
+                    <PayPage />
+                  </Suspense>
+                }
+              />
 
-                    {/* Open Signup & Authentication */}
-                    <Route path="/register" element={<RegisterPage />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+              {/* Application routes wrapped in AuthAppLayout */}
+              <Route element={<AuthAppLayout />}>
+                {/* Public Root: Landing page when logged out, redirects to /dashboard when logged in */}
+                <Route path="/" element={<RootRoute />} />
 
-                    {/* Protected Multi-Tenant Dashboard Shell & Academy Modules */}
-                    <Route
-                      element={
-                        <ProtectedRoute>
-                          <ErrorBoundary fallbackTitle="Dashboard Error">
-                            <DashboardLayout />
-                          </ErrorBoundary>
-                        </ProtectedRoute>
-                      }
-                    >
-                      <Route path="/dashboard" element={<DashboardPage />} />
-                      <Route path="/students" element={<StudentsPage />} />
-                      <Route path="/students/:id" element={<StudentProfilePage />} />
-                      <Route path="/batches" element={<BatchesPage />} />
-                      <Route path="/batches/:id" element={<BatchDetailPage />} />
-                      <Route path="/timetable" element={<TimetablePage />} />
-                      <Route path="/attendance" element={<AttendancePage />} />
-                      <Route path="/fees" element={<FeesPage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
-                      <Route path="/backups" element={<BackupsPage />} />
-                      <Route path="/exports" element={<ExportsPage />} />
-                    </Route>
+                {/* Open Signup & Authentication */}
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-                    {/* Fallback */}
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </Suspense>
-              </ToastProvider>
-            </AuthProvider>
+                {/* Protected Multi-Tenant Dashboard Shell & Academy Modules */}
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <ErrorBoundary fallbackTitle="Dashboard Error">
+                        <DashboardLayout />
+                      </ErrorBoundary>
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/students" element={<StudentsPage />} />
+                  <Route path="/students/:id" element={<StudentProfilePage />} />
+                  <Route path="/batches" element={<BatchesPage />} />
+                  <Route path="/batches/:id" element={<BatchDetailPage />} />
+                  <Route path="/timetable" element={<TimetablePage />} />
+                  <Route path="/attendance" element={<AttendancePage />} />
+                  <Route path="/fees" element={<FeesPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/backups" element={<BackupsPage />} />
+                  <Route path="/exports" element={<ExportsPage />} />
+                </Route>
+
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
           </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>

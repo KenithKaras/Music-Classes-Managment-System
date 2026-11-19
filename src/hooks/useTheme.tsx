@@ -11,7 +11,16 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isPayRoute = typeof window !== 'undefined' && window.location.pathname === '/pay';
+
   const [theme, setThemeState] = useState<Theme>(() => {
+    if (isPayRoute) {
+      try {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      } catch {
+        return 'light';
+      }
+    }
     try {
       const saved = localStorage.getItem('mix_theme');
       if (saved === 'dark' || saved === 'light') return saved;
@@ -28,12 +37,31 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       root.classList.remove('dark');
     }
-    try {
-      localStorage.setItem('mix_theme', theme);
-    } catch {
-      // storage unavailable
+    if (!isPayRoute) {
+      try {
+        localStorage.setItem('mix_theme', theme);
+      } catch {
+        // storage unavailable
+      }
     }
-  }, [theme]);
+  }, [theme, isPayRoute]);
+
+  // On /pay route, respond to color-scheme media changes without touching localStorage
+  useEffect(() => {
+    if (!isPayRoute || typeof window === 'undefined') return;
+    try {
+      const mql = window.matchMedia('(prefers-color-scheme: dark)');
+      const listener = (e: MediaQueryListEvent) => {
+        setThemeState(e.matches ? 'dark' : 'light');
+      };
+      if (mql.addEventListener) {
+        mql.addEventListener('change', listener);
+        return () => mql.removeEventListener('change', listener);
+      }
+    } catch {
+      // fallback
+    }
+  }, [isPayRoute]);
 
   const toggleTheme = () => {
     setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'));
