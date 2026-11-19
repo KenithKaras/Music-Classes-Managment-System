@@ -1,9 +1,19 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { validatePayPageParams, buildUpiAppLaunchUri } from '../utils/upiUtils';
-import { ShieldCheck, Copy, Check, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Copy, Check, AlertCircle, Loader2 } from 'lucide-react';
+
+interface ResolvedPaymentData {
+  payee_name: string;
+  upi_id: string;
+  amount: string;
+  note: string;
+}
 
 export const PayPage: React.FC = () => {
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isOutOfDate, setIsOutOfDate] = useState(false);
+  const [paymentData, setPaymentData] = useState<ResolvedPaymentData | null>(null);
 
   // Inject strict no-referrer and noindex meta tags
   useEffect(() => {
@@ -37,34 +47,102 @@ export const PayPage: React.FC = () => {
     };
   }, []);
 
-  // Parse and validate query parameters: pa, pn, am, tn, tr
-  const validationResult = useMemo(() => {
-    if (typeof window === 'undefined') {
-      return { isValid: false, error: 'Window undefined' };
-    }
+  // Inspect query parameters and resolve payment link
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const params = new URLSearchParams(window.location.search);
-    return validatePayPageParams(params);
+    const token = params.get('t')?.trim();
+    const hasLegacyParams =
+      params.has('pa') ||
+      params.has('pn') ||
+      params.has('am') ||
+      params.has('tn') ||
+      params.has('tr');
+
+    // If legacy parameters are present without t, show "out of date" message
+    if (!token && hasLegacyParams) {
+      setIsOutOfDate(true);
+      setErrorMsg('This payment link is out of date. Ask the academy for a new link.');
+      setIsLoading(false);
+      return;
+    }
+
+    // If token is missing, show generic invalid message
+    if (!token) {
+      setIsOutOfDate(false);
+      setErrorMsg('This payment link is not valid. Ask the academy for a new link.');
+      setIsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoading(true);
+    setErrorMsg(null);
+    setIsOutOfDate(false);
+
+    async function resolveSignedLink() {
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        const res = await fetch(`${supabaseUrl}/functions/v1/resolve-payment-link`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: anonKey,
+          },
+          body: JSON.stringify({ token }),
+        });
+
+        if (!res.ok) {
+          if (isMounted) {
+            setErrorMsg('This payment link is not valid. Ask the academy for a new link.');
+          }
+          return;
+        }
+
+        const data = await res.json();
+        if (isMounted) {
+          if (data && data.payee_name && data.upi_id && data.amount && data.note) {
+            setPaymentData(data);
+          } else {
+            setErrorMsg('This payment link is not valid. Ask the academy for a new link.');
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setErrorMsg('This payment link is not valid. Ask the academy for a new link.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    resolveSignedLink();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const { isValid, data } = validationResult;
-
   const handlePayClick = () => {
-    if (!data) return;
-    const uri = buildUpiAppLaunchUri({
-      upiId: data.upiId,
-      payeeName: data.payeeName,
-      amount: data.amount,
-      note: data.note,
-      tr: data.tr,
-    });
+    if (!paymentData) return;
+    const cleanPa = paymentData.upi_id.trim();
+    const cleanPn = paymentData.payee_name.trim().slice(0, 60);
+    const cleanAm = paymentData.amount.trim();
+    const cleanTn = paymentData.note.trim().slice(0, 80);
+    const uri = `upi://pay?pa=${encodeURIComponent(cleanPa)}&pn=${encodeURIComponent(cleanPn)}&am=${encodeURIComponent(cleanAm)}&tn=${encodeURIComponent(cleanTn)}&cu=INR`;
     window.location.href = uri;
   };
 
   const handleCopyUpi = async () => {
-    if (!data?.upiId) return;
+    if (!paymentData?.upi_id) return;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(data.upiId);
+        await navigator.clipboard.writeText(paymentData.upi_id);
       }
     } catch {
       // clipboard fallback
@@ -75,28 +153,38 @@ export const PayPage: React.FC = () => {
   };
 
   const formattedAmount = useMemo(() => {
-    if (!data?.amount) return '';
-    const num = parseFloat(data.amount);
-    return '₹' + new Intl.NumberFormat('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(num);
-  }, [data?.amount]);
+    if (!paymentData?.amount) return '';
+    const num = parseFloat(paymentData.amount);
+    return (
+      '₹' +
+      new Intl.NumberFormat('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(num)
+    );
+  }, [paymentData?.amount]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0b1120] text-slate-900 dark:text-slate-100 flex items-center justify-center p-4 transition-colors">
       <div className="w-full max-w-md bg-white dark:bg-[#161f30] rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-6 space-y-6 overflow-hidden">
-        {!isValid || !data ? (
+        {isLoading ? (
+          <div className="text-center py-12 space-y-3">
+            <Loader2 className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto" />
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+              Loading payment details...
+            </p>
+          </div>
+        ) : errorMsg || !paymentData ? (
           <div className="text-center py-8 space-y-4">
             <div className="w-14 h-14 bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-full flex items-center justify-center mx-auto">
               <AlertCircle className="w-8 h-8" />
             </div>
             <div className="space-y-2">
               <h1 className="text-lg font-bold text-slate-900 dark:text-white">
-                Invalid Payment Link
+                {isOutOfDate ? 'Payment Link Out of Date' : 'Invalid Payment Link'}
               </h1>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                This payment link is not valid. Ask the academy for a new link.
+                {errorMsg || 'This payment link is not valid. Ask the academy for a new link.'}
               </p>
             </div>
           </div>
@@ -109,10 +197,10 @@ export const PayPage: React.FC = () => {
                 <span>UPI Payment</span>
               </div>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white pt-2 break-words">
-                {data.payeeName}
+                {paymentData.payee_name}
               </h1>
               <p className="text-sm text-slate-500 dark:text-slate-400 break-words">
-                {data.note}
+                {paymentData.note}
               </p>
             </div>
 
@@ -135,10 +223,10 @@ export const PayPage: React.FC = () => {
             {/* Prominent UPI ID Verification Section */}
             <div className="space-y-2 text-center">
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Check that this UPI ID is the one you know for MIX with Me Classes before you pay.
+                Check that this UPI ID is the one you know for {paymentData.payee_name} before you pay.
               </p>
               <div className="inline-block px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-sm font-bold text-slate-900 dark:text-slate-100 break-all select-all">
-                {data.upiId}
+                {paymentData.upi_id}
               </div>
             </div>
 

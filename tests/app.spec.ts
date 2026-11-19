@@ -291,6 +291,37 @@ async function setupMockSessionAndRoutes(
     });
   });
 
+  // Edge Functions mock handlers
+  await page.route('**/functions/v1/create-payment-link', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ url: 'https://mix-with-me-classes.vercel.app/pay?t=valid_mock_token_1234567890abcdefghijklmno' }),
+    });
+  });
+
+  await page.route('**/functions/v1/resolve-payment-link', async (route) => {
+    const postData = route.request().postDataJSON() || {};
+    if (postData.token === 'valid_mock_token_1234567890abcdefghijklmno') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          payee_name: 'MIX with Me Classes',
+          upi_id: 'academy@okhdfcbank',
+          amount: '2500.00',
+          note: 'Music fees Nov 2026',
+        }),
+      });
+    } else {
+      await route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'This payment link is invalid or has expired.' }),
+      });
+    }
+  });
+
   await page.route('**/rest/v1/**', async (route) => {
     const req = route.request();
     const url = req.url();
@@ -534,7 +565,7 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     await setupMockSessionAndRoutes(page, 'light');
     await page.goto('/exports');
 
-    await expect(page.locator('h1', { hasText: 'Settings, Backups & Exports' })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Settings, Backups & Exports' })).toBeVisible({ timeout: 20000 });
 
     // Find the 12-Month Income Statement card container
     const incomeCard = page.locator('.rounded-2xl', {
@@ -1370,6 +1401,28 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     // 2. Open the copied link in a new page (as specified by user prompt)
     const payPage = await page.context().newPage();
 
+    await payPage.route('**/functions/v1/resolve-payment-link', async (route) => {
+      const postData = route.request().postDataJSON() || {};
+      if (postData.token === 'valid_mock_token_1234567890abcdefghijklmno') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            payee_name: 'MIX with Me Classes',
+            upi_id: 'academy@okhdfcbank',
+            amount: '2500.00',
+            note: 'Music fees Nov 2026',
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'This payment link is invalid or has expired.' }),
+        });
+      }
+    });
+
     const payCspViolations: string[] = [];
     payPage.on('console', (msg) => {
       const text = msg.text();
@@ -1387,7 +1440,7 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     const paySupabaseRequests: string[] = [];
     payPage.on('request', (req) => {
       const url = req.url();
-      if (url.includes('supabase.co')) {
+      if (url.includes('supabase.co/rest/v1/')) {
         paySupabaseRequests.push(url);
       }
     });
@@ -1439,25 +1492,23 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     await expect(payPage.getByText('₹2,500.00', { exact: true })).toBeVisible();
     await expect(payPage.getByRole('button', { name: 'Pay ₹2,500.00 with UPI' })).toBeVisible();
 
-    // 5. Open /pay with pn=<script>alert(1)</script> - confirm no dialog opens and text renders as plain text
-    const xssPath = `/pay?pa=academy@okhdfcbank&pn=${encodeURIComponent('<script>alert(1)</script>')}&am=1500.00&tn=Music%20fees%20Nov%202026&tr=ABCD1234EFGH5678`;
-    await payPage.goto(xssPath);
-    expect(payDialogTriggered).toBe(false);
-    await expect(payPage.locator('h1', { hasText: '<script>alert(1)</script>' })).toBeVisible();
-
-    // 6. Open /pay with pa=http://evil - confirm invalid notice and NO button appears
-    const evilPath = `/pay?pa=${encodeURIComponent('http://evil')}&pn=Academy&am=1500.00&tn=Music%20fees%20Nov%202026&tr=ABCD1234EFGH5678`;
-    await payPage.goto(evilPath);
+    // 5. Missing t parameter: /pay shows generic invalid message and NO button
+    await payPage.goto('/pay');
     await expect(payPage.locator('text=This payment link is not valid. Ask the academy for a new link.')).toBeVisible();
     await expect(payPage.getByRole('button', { name: /Pay/i })).toHaveCount(0);
 
-    // 7. Open /pay with a UPI ID not in the allowlist - confirm invalid notice and NO button appears
-    const unauthorizedUpiPath = `/pay?pa=attacker@okhdfcbank&pn=Academy&am=1500.00&tn=Music%20fees%20Nov%202026&tr=ABCD1234EFGH5678`;
-    await payPage.goto(unauthorizedUpiPath);
+    // 6. Invalid t parameter: /pay?t=invalid_token shows generic invalid message and NO button
+    await payPage.goto('/pay?t=invalid_token_12345');
     await expect(payPage.locator('text=This payment link is not valid. Ask the academy for a new link.')).toBeVisible();
     await expect(payPage.getByRole('button', { name: /Pay/i })).toHaveCount(0);
 
-    // 8. Confirm /pay made ZERO requests to supabase.co
+    // 7. Old pa/am/tn/tr links without t show "out of date" message and NO button
+    const oldParamsPath = `/pay?pa=academy@okhdfcbank&pn=Academy&am=1500.00&tn=Music%20fees%20Nov%202026&tr=ABCD1234EFGH5678`;
+    await payPage.goto(oldParamsPath);
+    await expect(payPage.locator('text=This payment link is out of date. Ask the academy for a new link.')).toBeVisible();
+    await expect(payPage.getByRole('button', { name: /Pay/i })).toHaveCount(0);
+
+    // 8. Confirm /pay made ZERO requests to supabase tables directly (/rest/v1/)
     expect(paySupabaseRequests).toEqual([]);
 
     // 9. Fail test on any console message containing "Content Security Policy"

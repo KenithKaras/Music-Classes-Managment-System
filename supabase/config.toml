@@ -1,0 +1,6 @@
+# Supabase Edge Functions Configuration
+[functions.create-payment-link]
+verify_jwt = true
+
+[functions.resolve-payment-link]
+verify_jwt = false

@@ -18,7 +18,6 @@ import { formatIndianCurrency, formatBillingMonth } from '../utils/feeUtils';
 import {
   buildPaymentRequestWhatsAppUrl,
   cleanIndianPhoneNumber,
-  buildHttpsPaymentUrl,
   isUpiIdAllowed,
 } from '../utils/upiUtils';
 import { downloadPaymentRequestPdf } from '../utils/paymentRequestPdf';
@@ -43,6 +42,13 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
   const [copiedAmount, setCopiedAmount] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [signedPayUrl, setSignedPayUrl] = useState<string | null>(null);
+  const [, setIsGeneratingSignedLink] = useState(false);
+
+  const upiId = settings?.upi_id?.trim() || '';
+  const isUpiConfigured = Boolean(upiId);
+  const isUpiAllowed = isUpiConfigured && isUpiIdAllowed(upiId);
+  const feeId = fee?.id;
 
   useEffect(() => {
     if (!propSettings && isOpen) {
@@ -53,6 +59,45 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
       setSettings(propSettings);
     }
   }, [propSettings, isOpen]);
+
+  // Invoke create-payment-link Edge Function for signed payment link
+  useEffect(() => {
+    let isMounted = true;
+    if (!isOpen || !feeId || !isUpiAllowed) {
+      setSignedPayUrl(null);
+      return;
+    }
+
+    async function fetchSignedLink() {
+      setIsGeneratingSignedLink(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('create-payment-link', {
+          body: { fee_id: feeId },
+        });
+        if (isMounted) {
+          if (!error && data?.url) {
+            setSignedPayUrl(data.url);
+          } else {
+            setSignedPayUrl(null);
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setSignedPayUrl(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsGeneratingSignedLink(false);
+        }
+      }
+    }
+
+    fetchSignedLink();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, feeId, isUpiAllowed]);
 
   if (!fee) return null;
 
@@ -67,23 +112,13 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
   const studentName = effectiveStudent.full_name;
   const monthLabel = formatBillingMonth(fee.billing_month);
   const academyName = settings?.academy_name || 'MIX with Me Classes';
-  const upiId = settings?.upi_id?.trim() || '';
   const qrStoragePath = settings?.upi_qr_path || '';
   const qrUrl = qrStoragePath
     ? supabase.storage.from('academy-assets').getPublicUrl(qrStoragePath).data.publicUrl
     : '';
-  const isUpiConfigured = Boolean(upiId);
-  const isUpiAllowed = isUpiConfigured && isUpiIdAllowed(upiId);
 
-  // Per-request HTTPS payment URL
-  const { url: httpsPayUrl } = isUpiAllowed
-    ? buildHttpsPaymentUrl({
-        upiId,
-        payeeName: academyName,
-        amount: balanceDue,
-        billingMonth: fee.billing_month,
-      })
-    : { url: null };
+  // Per-academy signed payment URL returned by create-payment-link
+  const effectivePayUrl = isUpiAllowed ? signedPayUrl : null;
 
   // Phone resolution
   const targetPhone =
@@ -98,7 +133,7 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
     upiId,
     dueDate: fee.due_date,
     academyName,
-    paymentUrl: httpsPayUrl,
+    paymentUrl: effectivePayUrl,
   });
 
   const handleCopyUpi = async () => {
@@ -129,10 +164,10 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
   };
 
   const handleCopyLink = async () => {
-    if (!httpsPayUrl) return;
+    if (!effectivePayUrl) return;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(httpsPayUrl);
+        await navigator.clipboard.writeText(effectivePayUrl);
       }
     } catch {
       // clipboard fallback
@@ -152,7 +187,7 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
         dueDate: fee.due_date,
         academySettings: settings,
         upiId,
-        paymentUrl: httpsPayUrl,
+        paymentUrl: effectivePayUrl,
       });
     } finally {
       setIsDownloadingPdf(false);
@@ -269,7 +304,7 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
 
             {/* HTTPS Payment Link Container or Fallback */}
             {isUpiAllowed ? (
-              httpsPayUrl && (
+              effectivePayUrl && (
                 <div className="bg-slate-50 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] rounded-xl p-3.5 space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
@@ -280,7 +315,7 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
                         className="font-mono text-xs text-indigo-600 dark:text-indigo-400 truncate select-all"
                         data-testid="payment-link-url"
                       >
-                        {httpsPayUrl}
+                        {effectivePayUrl}
                       </p>
                     </div>
                     <Button
