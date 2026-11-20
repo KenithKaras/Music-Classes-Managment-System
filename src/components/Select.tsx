@@ -18,7 +18,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const selectId = id || props.name || Math.random().toString(36).substring(2, 9);
 
     return (
-      <div className="w-full">
+      <div className="w-full min-w-0">
         {label && (
           <label htmlFor={selectId} className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
             {label}

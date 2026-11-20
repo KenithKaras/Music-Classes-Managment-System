@@ -98,6 +98,12 @@
   display: none;
 }
 
+/* Hide mobile bottom navigation bar when any modal is open */
+body.modal-open nav[aria-label="Mobile Navigation Bar"],
+body[data-modal-open="true"] nav[aria-label="Mobile Navigation Bar"] {
+  display: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
     animation-duration: 0.01ms !important;

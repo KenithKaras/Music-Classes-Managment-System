@@ -225,28 +225,27 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
       description="Fill in the student profile details below. Mandatory fields are marked with *"
       maxWidth="2xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      <form onSubmit={handleSubmit} className="space-y-5 flex flex-col min-h-full min-w-0" noValidate>
         {/* Photo Upload Section */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+        <div className="min-w-0">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             Student Photo (Optional)
           </label>
-          <div className="flex items-center gap-4">
-            <div className="relative w-18 h-18 rounded-full border-2 border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="relative shrink-0 flex-none rounded-full">
               <StudentAvatar
                 photoUrl={photoPreview || photoUrl}
                 name={fullName}
-                className="w-full h-full"
-                textClassName="text-xl font-bold"
+                size="md"
               />
               {isUploadingPhoto && (
-                <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center">
+                <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center rounded-full">
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 </div>
               )}
             </div>
 
-            <div className="flex-1 space-y-1.5">
+            <div className="flex-1 min-w-0 space-y-1.5">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -255,7 +254,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
                 className="hidden"
                 id="student-photo-file-input"
               />
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
                 <Button
                   type="button"
                   variant="secondary"
@@ -272,23 +271,23 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={handleRemovePhoto}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
                     icon={<X className="w-3.5 h-3.5" />}
                   >
                     Remove
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 JPG, PNG, or WebP. Max 2 MB.
               </p>
-              {photoError && <p className="text-xs text-red-600 font-medium">{photoError}</p>}
+              {photoError && <p className="text-xs text-red-600 dark:text-red-400 font-medium">{photoError}</p>}
             </div>
           </div>
         </div>
 
         {/* Name and Phone */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
           <Input
             label="Full Name"
             name="fullName"
@@ -319,7 +318,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
         </div>
 
         {/* Email and Enrollment Date */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
           <Input
             label="Email Address (Optional)"
             name="email"
@@ -345,7 +344,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
         </div>
 
         {/* Batch and Status */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
           <Select
             label="Assigned Batch"
             name="batchId"
@@ -368,7 +367,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
         </div>
 
         {/* Monthly Fee */}
-        <div>
+        <div className="min-w-0">
           <Input
             label="Monthly Fee (₹ INR)"
             name="monthlyFee"
@@ -388,11 +387,11 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
         </div>
 
         {/* Guardian Details */}
-        <div className="pt-2 border-t border-slate-100">
-          <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3">
+        <div className="pt-2 border-t border-slate-100 dark:border-[#26324a] min-w-0">
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3">
             Guardian / Emergency Contact (Optional)
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
             <Input
               label="Guardian Name"
               name="guardianName"
@@ -418,7 +417,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
         </div>
 
         {/* Address */}
-        <div>
+        <div className="min-w-0">
           <label htmlFor="address-field" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
             Residential Address (Optional)
           </label>
@@ -428,12 +427,12 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="e.g. 123 MG Road, Bengaluru"
-            className="block w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] text-sm p-3 transition-colors focus-visible:border-indigo-600 dark:focus-visible:border-indigo-400"
+            className="block w-full min-w-0 rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] text-sm p-3 transition-colors focus-visible:border-indigo-600 dark:focus-visible:border-indigo-400"
           />
         </div>
 
         {/* Action Buttons */}
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 w-full">
+        <div className="sticky bottom-0 -mx-5 sm:-mx-6 -mb-5 px-5 sm:px-6 py-3 sm:py-4 bg-white dark:bg-[#131c2e] border-t border-slate-100 dark:border-[#26324a] flex flex-col-reverse sm:flex-row sm:justify-end gap-3 w-full shrink-0 z-10 mt-auto">
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting} className="w-full sm:w-auto">
             Cancel
           </Button>

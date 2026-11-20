@@ -233,8 +233,7 @@ export const StudentProfilePage: React.FC = () => {
           <StudentAvatar
             photoUrl={student.photo_url}
             name={student.full_name}
-            className="w-24 h-24"
-            textClassName="text-2xl font-bold uppercase"
+            size="lg"
           />
 
           <div className="space-y-1.5 flex-1">

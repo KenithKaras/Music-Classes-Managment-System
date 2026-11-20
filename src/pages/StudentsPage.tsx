@@ -854,7 +854,7 @@ export const StudentsPage: React.FC = () => {
                     <StudentAvatar
                       photoUrl={student.photo_url}
                       name={student.full_name}
-                      className="w-12 h-12"
+                      size="sm"
                     />
                     <div>
                       <Link
