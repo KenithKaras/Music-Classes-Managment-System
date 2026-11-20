@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Music2, ArrowRight, CheckCircle2, AlertCircle, ShieldCheck, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { ArrowRight, CheckCircle2, AlertCircle, ShieldCheck, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -103,14 +103,13 @@ export const RegisterPage: React.FC = () => {
         <Link
           to={user ? '/dashboard' : '/'}
           aria-label={user ? 'Go to dashboard' : 'Go to home'}
-          className="inline-flex items-center gap-2.5 group"
+          className="inline-flex items-center justify-center group"
         >
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white shadow-sm">
-            <Music2 className="w-5 h-5" />
-          </div>
-          <span className="font-bold text-slate-900 dark:text-[#f1f5f9] text-xl tracking-tight">
-            MIX with Me Classes
-          </span>
+          <img
+            src="/logo/full-logo.png"
+            alt="MIX with Me Classes"
+            className="h-20 w-auto object-contain mx-auto rounded-xl"
+          />
         </Link>
 
         <h1 className="mt-4 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#f1f5f9] tracking-tight">

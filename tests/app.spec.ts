@@ -2323,4 +2323,80 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     const enrollFooter = page.locator('text=Made by Kenith Karas');
     await expect(enrollFooter).toBeVisible();
   });
+
+  // ----------------------------------------------------------------------------
+  // 26. PWA MANIFEST & LOGO ICONS
+  // ----------------------------------------------------------------------------
+  test('26. PWA Manifest & Icons: manifest loads with 200, icon URLs return 200 and match declared pixel sizes', async ({ page }) => {
+    // 1. Visit home page and verify HTML head tags
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+    const manifestLink = page.locator('link[rel="manifest"]');
+    await expect(manifestLink).toHaveAttribute('href', '/manifest.json');
+
+    const appleTouchIcon = page.locator('link[rel="apple-touch-icon"]');
+    await expect(appleTouchIcon).toHaveAttribute('href', '/icons/apple-touch-icon.png');
+
+    const themeColorMeta = page.locator('meta[name="theme-color"]');
+    await expect(themeColorMeta).toHaveAttribute('content', '#6366F1');
+
+    // 2. Fetch manifest.json and verify structure
+    const manifestRes = await page.request.get('/manifest.json');
+    expect(manifestRes.status()).toBe(200);
+
+    const manifest = await manifestRes.json();
+    expect(manifest.name).toBe('MIX with Me Classes');
+    expect(manifest.short_name).toBe('MIX with Me');
+    expect(manifest.theme_color).toBe('#6366F1');
+    expect(Array.isArray(manifest.icons)).toBe(true);
+
+    // 3. Verify each icon in manifest returns 200 and matches declared pixel dimensions
+    for (const icon of manifest.icons) {
+      const iconRes = await page.request.get(icon.src);
+      expect(iconRes.status(), `Icon ${icon.src} should return 200`).toBe(200);
+
+      const buf = await iconRes.body();
+      const width = buf.readUInt32BE(16);
+      const height = buf.readUInt32BE(20);
+
+      const [expectedW, expectedH] = icon.sizes.split('x').map(Number);
+      expect(width, `Width for ${icon.src} should match declared size`).toBe(expectedW);
+      expect(height, `Height for ${icon.src} should match declared size`).toBe(expectedH);
+
+      // Verify purpose
+      if (icon.src.includes('maskable')) {
+        expect(icon.purpose).toBe('maskable');
+      } else {
+        expect(icon.purpose).toBe('any');
+      }
+    }
+
+    // 4. Verify apple-touch-icon returns 200 and is 180x180
+    const appleRes = await page.request.get('/icons/apple-touch-icon.png');
+    expect(appleRes.status()).toBe(200);
+    const appleBuf = await appleRes.body();
+    expect(appleBuf.readUInt32BE(16)).toBe(180);
+    expect(appleBuf.readUInt32BE(20)).toBe(180);
+
+    // 5. Verify branding on pages:
+    // Landing page header uses full-logo.png
+    const landingHeaderLogo = page.locator('header img[src="/logo/full-logo.png"]');
+    await expect(landingHeaderLogo).toBeVisible();
+
+    // Login page uses full-logo.png
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    const loginLogo = page.locator('img[src="/logo/full-logo.png"]');
+    await expect(loginLogo).toBeVisible();
+
+    // Register page uses full-logo.png
+    await page.goto('/register', { waitUntil: 'domcontentloaded' });
+    const registerLogo = page.locator('img[src="/logo/full-logo.png"]');
+    await expect(registerLogo).toBeVisible();
+
+    // Authenticated dashboard uses app icon (not lockup) in sidebar/header
+    await setupMockSessionAndRoutes(page, 'light');
+    await page.goto('/dashboard');
+    const appIcon = page.locator('aside img[src="/icons/icon-192x192.png"], header img[src="/icons/icon-192x192.png"]').filter({ visible: true });
+    await expect(appIcon.first()).toBeVisible();
+  });
 });

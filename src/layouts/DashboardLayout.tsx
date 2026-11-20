@@ -78,9 +78,11 @@ export const DashboardLayout: React.FC = () => {
       <header className="md:hidden sticky top-0 z-30 bg-white dark:bg-[#131c2e] border-b border-slate-200 dark:border-[#26324a] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <Link to="/dashboard" aria-label="Go to dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white shrink-0">
-              <Music2 className="w-4 h-4" />
-            </div>
+            <img
+              src="/icons/icon-192x192.png"
+              alt="MIX with Me"
+              className="w-8 h-8 rounded-xl object-contain shrink-0"
+            />
             <span className="font-bold text-slate-900 dark:text-[#f1f5f9] text-sm tracking-tight truncate">
               MIX with Me
             </span>
@@ -106,9 +108,11 @@ export const DashboardLayout: React.FC = () => {
         {/* Brand */}
         <div className="h-16 px-6 border-b border-slate-200 dark:border-[#26324a] flex items-center justify-between">
           <Link to="/dashboard" aria-label="Go to dashboard" className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white shrink-0 shadow-xs">
-              <Music2 className="w-5 h-5" />
-            </div>
+            <img
+              src="/icons/icon-192x192.png"
+              alt="MIX with Me"
+              className="w-9 h-9 rounded-xl object-contain shrink-0 shadow-xs"
+            />
             <div className="truncate">
               <h1 className="font-bold text-slate-900 dark:text-[#f1f5f9] text-base leading-tight tracking-tight truncate">
                 MIX with Me
