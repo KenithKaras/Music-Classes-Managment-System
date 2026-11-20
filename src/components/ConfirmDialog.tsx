@@ -52,12 +52,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800 w-full">
           <Button
             type="button"
             variant="secondary"
             onClick={onClose}
             disabled={loading}
+            className="w-full sm:w-auto"
           >
             {cancelText}
           </Button>
@@ -66,6 +67,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             variant={variant === 'danger' ? 'danger' : 'primary'}
             onClick={onConfirm}
             loading={loading}
+            className="w-full sm:w-auto"
           >
             {confirmText}
           </Button>

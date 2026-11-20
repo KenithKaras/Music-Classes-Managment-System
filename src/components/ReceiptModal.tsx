@@ -201,21 +201,23 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         </div>
 
         {/* Modal Action Buttons */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 w-full">
           <Button
             type="button"
             variant="secondary"
             onClick={handlePrint}
             icon={Printer}
+            className="w-full sm:w-auto"
           >
             Print
           </Button>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <Button
               type="button"
               variant="secondary"
               onClick={onClose}
+              className="w-full sm:w-auto"
             >
               Close
             </Button>
@@ -225,6 +227,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               loading={isDownloadingDocx}
               onClick={handleDownloadDocx}
               icon={Download}
+              className="w-full sm:w-auto"
             >
               Download Word
             </Button>
@@ -234,6 +237,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               loading={isDownloadingPdf}
               onClick={handleDownloadPdf}
               icon={Download}
+              className="w-full sm:w-auto"
             >
               Download PDF
             </Button>

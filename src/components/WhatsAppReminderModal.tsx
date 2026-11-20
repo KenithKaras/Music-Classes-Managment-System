@@ -164,20 +164,20 @@ export const WhatsAppReminderModal: React.FC<WhatsAppReminderModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-[#26324a]">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-slate-100 dark:border-[#26324a] w-full">
           <Button
             type="button"
             variant="secondary"
             size="sm"
             onClick={handleCopy}
             icon={copied ? Check : Copy}
-            className="min-h-[44px]"
+            className="min-h-[44px] w-full sm:w-auto"
           >
             {copied ? 'Copied' : 'Copy Text'}
           </Button>
 
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={onClose} className="min-h-[44px]">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <Button type="button" variant="secondary" size="sm" onClick={onClose} className="min-h-[44px] w-full sm:w-auto">
               Cancel
             </Button>
             <Button
@@ -187,7 +187,7 @@ export const WhatsAppReminderModal: React.FC<WhatsAppReminderModalProps> = ({
               disabled={!isPhoneValid || !message.trim()}
               onClick={handleOpenWhatsApp}
               icon={ExternalLink}
-              className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 focus:ring-emerald-500 min-h-[44px] min-w-[44px]"
+              className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 focus:ring-emerald-500 min-h-[44px] min-w-[44px] w-full sm:w-auto"
             >
               Open WhatsApp
             </Button>

@@ -31,7 +31,7 @@ serve(async (req: Request) => {
   const appOrigin = (Deno.env.get('APP_ORIGIN') ?? '').replace(/\/+$/, '');
 
   if (!appOrigin) {
-    return new Response(JSON.stringify({ error: GENERIC_ERROR }), {
+    return new Response(JSON.stringify({ error: GENERIC_ERROR, code: 'server_config' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -48,7 +48,7 @@ serve(async (req: Request) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: GENERIC_ERROR }), {
+    return new Response(JSON.stringify({ error: GENERIC_ERROR, code: 'invalid_input' }), {
       status: 405,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -58,7 +58,7 @@ serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       logDev('unauthorized: missing or invalid authorization header');
-      return new Response(JSON.stringify({ error: GENERIC_ERROR }), {
+      return new Response(JSON.stringify({ error: GENERIC_ERROR, code: 'unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -79,7 +79,7 @@ serve(async (req: Request) => {
 
     if (userError || !user) {
       logDev('unauthorized: invalid user token');
-      return new Response(JSON.stringify({ error: GENERIC_ERROR }), {
+      return new Response(JSON.stringify({ error: GENERIC_ERROR, code: 'unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -97,7 +97,7 @@ serve(async (req: Request) => {
     for (const key of Object.keys(body)) {
       if (!allowedKeys.includes(key)) {
         logDev(`invalid key in input: ${key}`);
-        return new Response(JSON.stringify({ error: GENERIC_ERROR }), {
+        return new Response(JSON.stringify({ error: GENERIC_ERROR, code: 'invalid_input' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -113,7 +113,7 @@ serve(async (req: Request) => {
         body.max_submissions > 20
       ) {
         logDev('invalid max_submissions: must be an integer between 1 and 20');
-        return new Response(JSON.stringify({ error: GENERIC_ERROR }), {
+        return new Response(JSON.stringify({ error: GENERIC_ERROR, code: 'invalid_input' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -130,7 +130,7 @@ serve(async (req: Request) => {
         body.expires_in_days > 30
       ) {
         logDev('invalid expires_in_days: must be an integer between 1 and 30');
-        return new Response(JSON.stringify({ error: GENERIC_ERROR }), {
+        return new Response(JSON.stringify({ error: GENERIC_ERROR, code: 'invalid_input' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -161,7 +161,7 @@ serve(async (req: Request) => {
 
     if (insertError) {
       logDev('database insert failed');
-      return new Response(JSON.stringify({ error: GENERIC_ERROR }), {
+      return new Response(JSON.stringify({ error: GENERIC_ERROR, code: 'insert_failed' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -174,8 +174,8 @@ serve(async (req: Request) => {
     });
   } catch {
     logDev('unexpected exception in create-enrollment-link');
-    return new Response(JSON.stringify({ error: GENERIC_ERROR }), {
-      status: 400,
+    return new Response(JSON.stringify({ error: GENERIC_ERROR, code: 'server_config' }), {
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

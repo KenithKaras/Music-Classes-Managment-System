@@ -5,6 +5,7 @@ import { Select } from './Select';
 import { supabase } from '../lib/supabase';
 import type { EnrollmentLink } from '../types';
 import { Copy, Check, Share2, AlertCircle, Link2, XCircle } from 'lucide-react';
+import { mapEnrollmentError } from '../utils/enrollmentUtils';
 
 interface EnrollmentLinkModalProps {
   isOpen: boolean;
@@ -62,7 +63,7 @@ export const EnrollmentLinkModal: React.FC<EnrollmentLinkModalProps> = ({
       } = await supabase.auth.getSession();
 
       if (!session?.access_token) {
-        setError('Authentication required to create enrollment links.');
+        setError('Your session has expired. Log in again.');
         setIsGenerating(false);
         return;
       }
@@ -80,15 +81,21 @@ export const EnrollmentLinkModal: React.FC<EnrollmentLinkModalProps> = ({
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setError(data.error || 'Failed to generate enrollment link.');
+      let data: Record<string, any> | null = null;
+      try {
+        data = await res.json();
+      } catch {
+        // response was not JSON
+      }
+
+      if (!res.ok || !data?.url) {
+        setError(mapEnrollmentError(res.status, data?.code));
       } else {
         setGeneratedUrl(data.url);
         await fetchLinks();
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
+    } catch {
+      setError(mapEnrollmentError(0, 'network_error'));
     } finally {
       setIsGenerating(false);
     }
@@ -181,6 +188,7 @@ export const EnrollmentLinkModal: React.FC<EnrollmentLinkModalProps> = ({
             variant="primary"
             onClick={handleGenerateLink}
             loading={isGenerating}
+            disabled={isGenerating}
             className="w-full sm:w-auto"
           >
             Generate Link
@@ -299,8 +307,8 @@ export const EnrollmentLinkModal: React.FC<EnrollmentLinkModalProps> = ({
           )}
         </div>
 
-        <div className="flex justify-end pt-2">
-          <Button variant="secondary" onClick={onClose}>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2 w-full">
+          <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">
             Done
           </Button>
         </div>

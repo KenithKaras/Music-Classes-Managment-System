@@ -94,7 +94,7 @@ export const BatchesPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <Button
               type="button"
               variant="primary"
@@ -103,6 +103,7 @@ export const BatchesPage: React.FC = () => {
                 setIsFormModalOpen(true);
               }}
               icon={<Plus className="w-4 h-4" />}
+              className="w-full sm:w-auto"
             >
               Add Batch
             </Button>

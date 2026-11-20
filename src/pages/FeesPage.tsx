@@ -106,6 +106,8 @@ export const FeesPage: React.FC = () => {
 
   // Modals state
   const [selectedFeeForPayment, setSelectedFeeForPayment] = useState<MonthlyFee | null>(null);
+  const [paymentInitialMethod, setPaymentInitialMethod] = useState<PaymentMethod | undefined>(undefined);
+  const [paymentInitialAmount, setPaymentInitialAmount] = useState<number | undefined>(undefined);
   const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<Payment | null>(null);
   const [receiptBalanceRemaining, setReceiptBalanceRemaining] = useState<number>(0);
   const [reminderFee, setReminderFee] = useState<MonthlyFee | null>(null);
@@ -113,8 +115,10 @@ export const FeesPage: React.FC = () => {
 
   // Screenshots state (Feature A)
   const [pendingScreenshots, setPendingScreenshots] = useState<PaymentScreenshot[]>([]);
-  const [viewingScreenshotUrl, setViewingScreenshotUrl] = useState<string | null>(null);
-  const [loadingScreenshotId, setLoadingScreenshotId] = useState<string | null>(null);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<PaymentScreenshot | null>(null);
+  const [screenshotSignedUrl, setScreenshotSignedUrl] = useState<string | null>(null);
+  const [loadingScreenshot, setLoadingScreenshot] = useState<boolean>(false);
+  const [screenshotError, setScreenshotError] = useState<string | null>(null);
 
   const fetchPendingScreenshots = useCallback(async () => {
     try {
@@ -158,22 +162,38 @@ export const FeesPage: React.FC = () => {
     }
   }, []);
 
-  const handleViewScreenshot = async (storagePath: string, id: string) => {
-    setLoadingScreenshotId(id);
+  const handleOpenScreenshotModal = async (screenshot: PaymentScreenshot) => {
+    setSelectedScreenshot(screenshot);
+    setScreenshotSignedUrl(null);
+    setScreenshotError(null);
+    setLoadingScreenshot(true);
     try {
       const { data, error } = await supabase.storage
         .from('payment-screenshots')
-        .createSignedUrl(storagePath, 60);
-      if (data?.signedUrl) {
-        setViewingScreenshotUrl(data.signedUrl);
-      } else if (error) {
-        alert('Could not generate secure view link: ' + error.message);
+        .createSignedUrl(screenshot.storage_path, 60);
+      if (error || !data?.signedUrl) {
+        setScreenshotError('Could not load the screenshot. Close and try again.');
+      } else {
+        setScreenshotSignedUrl(data.signedUrl);
       }
     } catch {
-      alert('Failed to view screenshot.');
+      setScreenshotError('Could not load the screenshot. Close and try again.');
     } finally {
-      setLoadingScreenshotId(null);
+      setLoadingScreenshot(false);
     }
+  };
+
+  const handleMarkReceived = (fee: MonthlyFee) => {
+    const balance = fee.balance ?? Math.max(0, fee.amount_due - (fee.amount_paid || 0));
+    setPaymentInitialMethod('upi');
+    setPaymentInitialAmount(balance);
+    setSelectedFeeForPayment(fee);
+  };
+
+  const handleRecordPayment = (fee: MonthlyFee) => {
+    setPaymentInitialMethod(undefined);
+    setPaymentInitialAmount(undefined);
+    setSelectedFeeForPayment(fee);
   };
 
   const handleMarkScreenshotReviewed = async (id: string) => {
@@ -211,6 +231,16 @@ export const FeesPage: React.FC = () => {
       }
     });
     return set;
+  }, [pendingScreenshots]);
+
+  const screenshotsByFeeId = React.useMemo(() => {
+    const map = new Map<string, PaymentScreenshot>();
+    pendingScreenshots.forEach((s) => {
+      if (s.payment_link?.monthly_fee_id) {
+        map.set(s.payment_link.monthly_fee_id, s);
+      }
+    });
+    return map;
   }, [pendingScreenshots]);
 
   // Load batches on mount
@@ -615,15 +645,14 @@ export const FeesPage: React.FC = () => {
                           size="sm"
                           variant="outline"
                           className="flex-1 text-xs"
-                          onClick={() => handleViewScreenshot(screenshot.storage_path, screenshot.id)}
-                          loading={loadingScreenshotId === screenshot.id}
+                          onClick={() => handleOpenScreenshotModal(screenshot)}
                         >
-                          View Screenshot
+                          View
                         </Button>
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="text-xs text-emerald-700 hover:text-emerald-800"
+                          className="text-xs text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
                           onClick={() => handleMarkScreenshotReviewed(screenshot.id)}
                         >
                           Mark Reviewed
@@ -631,7 +660,7 @@ export const FeesPage: React.FC = () => {
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="text-xs text-rose-600 hover:text-rose-700"
+                          className="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400"
                           onClick={() => handleDeleteScreenshot(screenshot)}
                         >
                           Delete
@@ -792,15 +821,34 @@ export const FeesPage: React.FC = () => {
                         </td>
 
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-2 flex-wrap">
                             {fee.status !== 'paid' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="primary"
+                                  onClick={() => handleRecordPayment(fee)}
+                                  icon={PlusCircle}
+                                >
+                                  Record Payment
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => handleMarkReceived(fee)}
+                                >
+                                  Mark received
+                                </Button>
+                              </>
+                            )}
+
+                            {screenshotsByFeeId.has(fee.id) && (
                               <Button
                                 size="sm"
-                                variant="primary"
-                                onClick={() => setSelectedFeeForPayment(fee)}
-                                icon={PlusCircle}
+                                variant="outline"
+                                onClick={() => handleOpenScreenshotModal(screenshotsByFeeId.get(fee.id)!)}
                               >
-                                Record Payment
+                                View screenshot
                               </Button>
                             )}
 
@@ -837,7 +885,7 @@ export const FeesPage: React.FC = () => {
                                 onClick={() => setReminderFee(fee)}
                                 icon={MessageSquare}
                                 title="Send WhatsApp Reminder"
-                                className="text-emerald-700 hover:text-emerald-800"
+                                className="text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
                               >
                                 Remind
                               </Button>
@@ -889,30 +937,48 @@ export const FeesPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl">
+                    <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 p-2.5 rounded-xl">
                       <div>
-                        <span className="text-slate-400">Amount Due:</span>
-                        <p className="font-semibold text-slate-900 text-sm">
+                        <span className="text-slate-400 dark:text-slate-500">Amount Due:</span>
+                        <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
                           {formatIndianCurrency(fee.amount_due)}
                         </p>
                       </div>
                       <div>
-                        <span className="text-slate-400">Balance:</span>
-                        <p className="font-semibold text-red-600 text-sm">
+                        <span className="text-slate-400 dark:text-slate-500">Balance:</span>
+                        <p className="font-semibold text-red-600 dark:text-red-400 text-sm">
                           {formatIndianCurrency(fee.balance || 0)}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2 pt-1">
+                    <div className="flex items-center justify-end gap-2 pt-1 flex-wrap">
                       {fee.status !== 'paid' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={() => handleRecordPayment(fee)}
+                            icon={PlusCircle}
+                          >
+                            Pay
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleMarkReceived(fee)}
+                          >
+                            Mark received
+                          </Button>
+                        </>
+                      )}
+                      {screenshotsByFeeId.has(fee.id) && (
                         <Button
                           size="sm"
-                          variant="primary"
-                          onClick={() => setSelectedFeeForPayment(fee)}
-                          icon={PlusCircle}
+                          variant="outline"
+                          onClick={() => handleOpenScreenshotModal(screenshotsByFeeId.get(fee.id)!)}
                         >
-                          Pay
+                          View screenshot
                         </Button>
                       )}
                       {(fee.balance ?? (fee.amount_due - (fee.amount_paid || 0))) > 0 && (
@@ -946,7 +1012,7 @@ export const FeesPage: React.FC = () => {
                           onClick={() => setReminderFee(fee)}
                           icon={MessageSquare}
                           title="Send WhatsApp Reminder"
-                          className="text-emerald-700 hover:text-emerald-800"
+                          className="text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
                         >
                           Remind
                         </Button>
@@ -1024,27 +1090,50 @@ export const FeesPage: React.FC = () => {
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
                           {fee.student?.batch?.name || 'No Batch'}
                         </td>
-                        <td className="px-6 py-4 text-slate-800 font-medium">
+                        <td className="px-6 py-4 text-slate-800 dark:text-slate-200 font-medium">
                           {formatBillingMonth(fee.billing_month)}
                         </td>
-                        <td className="px-6 py-4 font-bold text-red-600">
+                        <td className="px-6 py-4 font-bold text-red-600 dark:text-red-400">
                           {formatIndianCurrency(fee.balance || 0)}
                         </td>
                         <td className="px-6 py-4">
-                          <Badge variant="danger" size="sm">
-                            {fee.days_overdue} days overdue
-                          </Badge>
+                          <div className="flex flex-col gap-1 items-start">
+                            <Badge variant="danger" size="sm">
+                              {fee.days_overdue} days overdue
+                            </Badge>
+                            {feeIdsWithScreenshot.has(fee.id) && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                                Screenshot Attached
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-2 flex-wrap">
                             <Button
                               size="sm"
                               variant="primary"
-                              onClick={() => setSelectedFeeForPayment(fee)}
+                              onClick={() => handleRecordPayment(fee)}
                               icon={PlusCircle}
                             >
                               Record Payment
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleMarkReceived(fee)}
+                            >
+                              Mark received
+                            </Button>
+                            {screenshotsByFeeId.has(fee.id) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenScreenshotModal(screenshotsByFeeId.get(fee.id)!)}
+                              >
+                                View screenshot
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -1058,7 +1147,7 @@ export const FeesPage: React.FC = () => {
                               variant="secondary"
                               onClick={() => setReminderFee(fee)}
                               icon={MessageSquare}
-                              className="text-emerald-700 hover:text-emerald-800"
+                              className="text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
                             >
                               WhatsApp
                             </Button>
@@ -1071,38 +1160,61 @@ export const FeesPage: React.FC = () => {
               </div>
 
               {/* Mobile View */}
-              <div className="md:hidden divide-y divide-slate-100">
+              <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
                 {overdueFees.map((fee) => (
-                  <div key={fee.id} className="p-4 space-y-3">
+                  <div key={fee.id} className="p-4 space-y-3 bg-white dark:bg-[#131c2e]">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-semibold text-slate-900">{fee.student?.full_name}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">{fee.student?.full_name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           {fee.student?.batch?.name || 'No Batch'} •{' '}
                           {formatBillingMonth(fee.billing_month)}
                         </p>
                       </div>
-                      <Badge variant="danger" size="sm">
-                        {fee.days_overdue}d overdue
-                      </Badge>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant="danger" size="sm">
+                          {fee.days_overdue}d overdue
+                        </Badge>
+                        {feeIdsWithScreenshot.has(fee.id) && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                            Screenshot Attached
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs bg-red-50/50 p-2.5 rounded-lg border border-red-100">
-                      <span className="text-slate-600">Pending Due:</span>
-                      <span className="font-bold text-red-700 text-sm">
+                    <div className="flex items-center justify-between text-xs bg-red-50/50 dark:bg-red-950/40 p-2.5 rounded-lg border border-red-100 dark:border-red-900/60">
+                      <span className="text-slate-600 dark:text-slate-400">Pending Due:</span>
+                      <span className="font-bold text-red-700 dark:text-red-400 text-sm">
                         {formatIndianCurrency(fee.balance || 0)}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-2 flex-wrap">
                       <Button
                         size="sm"
                         variant="primary"
-                        onClick={() => setSelectedFeeForPayment(fee)}
+                        onClick={() => handleRecordPayment(fee)}
                         icon={PlusCircle}
                       >
                         Record Payment
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleMarkReceived(fee)}
+                      >
+                        Mark received
+                      </Button>
+                      {screenshotsByFeeId.has(fee.id) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenScreenshotModal(screenshotsByFeeId.get(fee.id)!)}
+                        >
+                          View screenshot
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -1116,6 +1228,7 @@ export const FeesPage: React.FC = () => {
                         variant="secondary"
                         onClick={() => setReminderFee(fee)}
                         icon={MessageSquare}
+                        className="text-emerald-700 hover:text-emerald-800 dark:text-emerald-400"
                       >
                         WhatsApp
                       </Button>
@@ -1439,8 +1552,14 @@ export const FeesPage: React.FC = () => {
       {/* 1. Record Payment Modal */}
       <RecordPaymentModal
         isOpen={!!selectedFeeForPayment}
-        onClose={() => setSelectedFeeForPayment(null)}
+        onClose={() => {
+          setSelectedFeeForPayment(null);
+          setPaymentInitialMethod(undefined);
+          setPaymentInitialAmount(undefined);
+        }}
         fee={selectedFeeForPayment}
+        initialMethod={paymentInitialMethod}
+        initialAmount={paymentInitialAmount}
         onSuccess={handlePaymentSuccess}
       />
 
@@ -1467,30 +1586,108 @@ export const FeesPage: React.FC = () => {
       />
 
       {/* 5. Screenshot Preview Modal (Feature A) */}
-      {viewingScreenshotUrl && (
+      {selectedScreenshot && (
         <Modal
-          isOpen={!!viewingScreenshotUrl}
-          onClose={() => setViewingScreenshotUrl(null)}
+          isOpen={!!selectedScreenshot}
+          onClose={() => {
+            setSelectedScreenshot(null);
+            setScreenshotSignedUrl(null);
+            setScreenshotError(null);
+          }}
           title="Payment Screenshot"
-          description="60-second secure temporary preview from private storage"
+          description="Verification of student UPI payment"
           maxWidth="md"
         >
           <div className="space-y-4">
-            <div className="max-h-[70vh] overflow-auto flex items-center justify-center bg-slate-950 rounded-xl p-2">
-              <img
-                src={viewingScreenshotUrl}
-                alt="Payment Screenshot Preview"
-                className="max-h-[65vh] object-contain rounded-lg"
-              />
+            {/* Meta details */}
+            <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div>
+                <span className="text-slate-400 dark:text-slate-500 font-medium">Student</span>
+                <p className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                  {selectedScreenshot.payment_link?.monthly_fee?.student?.full_name || 'Student'}
+                </p>
+              </div>
+              <div>
+                <span className="text-slate-400 dark:text-slate-500 font-medium">Billing Month</span>
+                <p className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                  {selectedScreenshot.payment_link?.monthly_fee?.billing_month
+                    ? formatBillingMonth(selectedScreenshot.payment_link.monthly_fee.billing_month)
+                    : 'Current Month'}
+                </p>
+              </div>
+              <div>
+                <span className="text-slate-400 dark:text-slate-500 font-medium">Uploaded</span>
+                <p className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                  {new Date(selectedScreenshot.created_at).toLocaleString('en-IN', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                </p>
+              </div>
             </div>
-            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
-              <span>This URL expires automatically in 60 seconds.</span>
+
+            {/* Screenshot Image Container */}
+            <div className="relative min-h-[220px] max-h-[50vh] flex items-center justify-center bg-slate-100 dark:bg-slate-900/50 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 p-2">
+              {loadingScreenshot && (
+                <div className="flex flex-col items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="w-6 h-6 border-2 border-slate-300 dark:border-slate-700 border-t-indigo-600 rounded-full animate-spin" />
+                  <span>Loading secure screenshot...</span>
+                </div>
+              )}
+
+              {screenshotError && (
+                <div className="p-4 text-center space-y-1">
+                  <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">
+                    {screenshotError}
+                  </p>
+                </div>
+              )}
+
+              {!loadingScreenshot && !screenshotError && screenshotSignedUrl && (
+                <img
+                  src={screenshotSignedUrl}
+                  alt="Payment screenshot proof"
+                  className="max-h-[46vh] w-auto max-w-full object-contain rounded-lg shadow-xs"
+                  onError={() => setScreenshotError('Could not load the screenshot. Close and try again.')}
+                />
+              )}
+            </div>
+
+            {/* Action Buttons: Mark received and Close */}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 w-full">
               <Button
-                size="sm"
+                type="button"
                 variant="secondary"
-                onClick={() => setViewingScreenshotUrl(null)}
+                onClick={() => {
+                  setSelectedScreenshot(null);
+                  setScreenshotSignedUrl(null);
+                  setScreenshotError(null);
+                }}
+                className="w-full sm:w-auto"
               >
                 Close
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => {
+                  const feeId = selectedScreenshot.payment_link?.monthly_fee_id;
+                  const matchedFee =
+                    monthlyFees.find((f) => f.id === feeId) ||
+                    overdueFees.find((f) => f.id === feeId) ||
+                    (selectedScreenshot.payment_link?.monthly_fee as MonthlyFee | undefined);
+
+                  setSelectedScreenshot(null);
+                  setScreenshotSignedUrl(null);
+                  setScreenshotError(null);
+
+                  if (matchedFee) {
+                    handleMarkReceived(matchedFee);
+                  }
+                }}
+                className="w-full sm:w-auto"
+              >
+                Mark received
               </Button>
             </div>
           </div>

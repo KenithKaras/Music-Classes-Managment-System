@@ -362,13 +362,13 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-[#26324a]">
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} className="min-h-[44px]">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-slate-100 dark:border-[#26324a] w-full">
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} className="min-h-[44px] w-full sm:w-auto">
             Close
           </Button>
 
           {isUpiConfigured && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               <Button
                 type="button"
                 variant="secondary"
@@ -376,7 +376,7 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
                 loading={isDownloadingPdf}
                 onClick={handleDownloadPdf}
                 icon={Download}
-                className="min-h-[44px]"
+                className="min-h-[44px] w-full sm:w-auto"
               >
                 Download payment request (PDF)
               </Button>
@@ -387,7 +387,7 @@ export const PaymentRequestModal: React.FC<PaymentRequestModalProps> = ({
                 disabled={!isPhoneValid}
                 onClick={handleOpenWhatsApp}
                 icon={ExternalLink}
-                className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 min-h-[44px]"
+                className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 min-h-[44px] w-full sm:w-auto"
               >
                 Open WhatsApp
               </Button>

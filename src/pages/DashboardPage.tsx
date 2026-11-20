@@ -237,13 +237,14 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
             <Button
               type="button"
               variant="secondary"
               size="sm"
               onClick={() => navigate('/timetable')}
               icon={<Calendar className="w-4 h-4" />}
+              className="w-full sm:w-auto"
             >
               Timetable
             </Button>
@@ -253,6 +254,7 @@ export const DashboardPage: React.FC = () => {
               size="sm"
               onClick={() => navigate('/attendance')}
               icon={<ClipboardCheck className="w-4 h-4" />}
+              className="w-full sm:w-auto"
             >
               Attendance
             </Button>
@@ -262,6 +264,7 @@ export const DashboardPage: React.FC = () => {
               size="sm"
               onClick={() => navigate('/fees')}
               icon={<CreditCard className="w-4 h-4" />}
+              className="w-full sm:w-auto"
             >
               Fees &amp; Payments
             </Button>

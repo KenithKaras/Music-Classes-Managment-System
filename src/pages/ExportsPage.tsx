@@ -133,7 +133,7 @@ export const ExportsPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
             <Button
               type="button"
               variant="outline"
@@ -142,6 +142,7 @@ export const ExportsPage: React.FC = () => {
               disabled={activeExport !== null}
               onClick={() => runExport('students-pdf', () => exportStudentDirectory('pdf'), 'Student Directory PDF')}
               icon={Download}
+              className="w-full sm:w-auto"
             >
               Download PDF
             </Button>
@@ -153,6 +154,7 @@ export const ExportsPage: React.FC = () => {
               disabled={activeExport !== null}
               onClick={() => runExport('students-docx', () => exportStudentDirectory('docx'), 'Student Directory Word')}
               icon={Download}
+              className="w-full sm:w-auto"
             >
               Download Word
             </Button>
@@ -172,7 +174,7 @@ export const ExportsPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
               <Button
                 type="button"
                 variant="outline"
@@ -187,6 +189,7 @@ export const ExportsPage: React.FC = () => {
                   )
                 }
                 icon={Download}
+                className="w-full sm:w-auto"
               >
                 Download PDF
               </Button>
@@ -204,6 +207,7 @@ export const ExportsPage: React.FC = () => {
                   )
                 }
                 icon={Download}
+                className="w-full sm:w-auto"
               >
                 Download Word
               </Button>
@@ -242,7 +246,7 @@ export const ExportsPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
               <Button
                 type="button"
                 variant="outline"
@@ -263,6 +267,7 @@ export const ExportsPage: React.FC = () => {
                   );
                 }}
                 icon={Download}
+                className="w-full sm:w-auto"
               >
                 Download PDF
               </Button>
@@ -286,6 +291,7 @@ export const ExportsPage: React.FC = () => {
                   );
                 }}
                 icon={Download}
+                className="w-full sm:w-auto"
               >
                 Download Word
               </Button>
@@ -341,7 +347,7 @@ export const ExportsPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
               <Button
                 type="button"
                 variant="outline"
@@ -356,6 +362,7 @@ export const ExportsPage: React.FC = () => {
                   )
                 }
                 icon={Download}
+                className="w-full sm:w-auto"
               >
                 Download PDF
               </Button>
@@ -373,6 +380,7 @@ export const ExportsPage: React.FC = () => {
                   )
                 }
                 icon={Download}
+                className="w-full sm:w-auto"
               >
                 Download Word
               </Button>

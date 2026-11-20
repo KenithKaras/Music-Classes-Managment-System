@@ -4,6 +4,7 @@ import {
   isValidEnrollmentToken,
   validateEnrollmentForm,
   isEnrollmentLinkFull,
+  mapEnrollmentError,
   type EnrollmentFormData,
 } from './enrollmentUtils';
 
@@ -93,6 +94,66 @@ describe('enrollmentUtils - Validation & Business Logic', () => {
     it('returns false when submissions_count is strictly less than max_submissions', () => {
       expect(isEnrollmentLinkFull(4, 5)).toBe(false);
       expect(isEnrollmentLinkFull(0, 5)).toBe(false);
+    });
+  });
+
+  describe('mapEnrollmentError', () => {
+    it('maps 401 or unauthorized to session expiration message', () => {
+      expect(mapEnrollmentError(401, 'unauthorized')).toBe('Your session has expired. Log in again.');
+      expect(mapEnrollmentError(401)).toBe('Your session has expired. Log in again.');
+      expect(mapEnrollmentError(undefined, 'unauthorized')).toBe('Your session has expired. Log in again.');
+    });
+
+    it('maps 400 invalid_input to input checking message', () => {
+      expect(mapEnrollmentError(400, 'invalid_input')).toBe(
+        'Check the number of registrations and the expiry, then try again.'
+      );
+      expect(mapEnrollmentError(undefined, 'invalid_input')).toBe(
+        'Check the number of registrations and the expiry, then try again.'
+      );
+    });
+
+    it('maps 500 or server_config to configuration message', () => {
+      expect(mapEnrollmentError(500, 'server_config')).toBe(
+        'The registration service is not configured. Contact the developer.'
+      );
+      expect(mapEnrollmentError(500)).toBe(
+        'The registration service is not configured. Contact the developer.'
+      );
+      expect(mapEnrollmentError(undefined, 'server_config')).toBe(
+        'The registration service is not configured. Contact the developer.'
+      );
+    });
+
+    it('maps 400 insert_failed to save link retry message', () => {
+      expect(mapEnrollmentError(400, 'insert_failed')).toBe('Could not save the link. Try again in a minute.');
+      expect(mapEnrollmentError(undefined, 'insert_failed')).toBe('Could not save the link. Try again in a minute.');
+    });
+
+    it('maps 0 or network_error to connection message', () => {
+      expect(mapEnrollmentError(0)).toBe('Could not reach the server. Check your connection.');
+      expect(mapEnrollmentError(undefined, 'network_error')).toBe('Could not reach the server. Check your connection.');
+    });
+
+    it('maps unknown codes or statuses to generic fallback message', () => {
+      expect(mapEnrollmentError(404, 'not_found')).toBe('Could not create the link. Try again.');
+      expect(mapEnrollmentError()).toBe('Could not create the link. Try again.');
+    });
+
+    it('never outputs raw JSON, status codes, or stack traces', () => {
+      const messages = [
+        mapEnrollmentError(401, '{"error":"some db raw trace"}'),
+        mapEnrollmentError(500, 'Error: internal server crash at file.ts:12:4'),
+        mapEnrollmentError(400, 'PGRST116'),
+      ];
+      for (const msg of messages) {
+        expect(msg).not.toContain('{');
+        expect(msg).not.toContain('}');
+        expect(msg).not.toContain('stack');
+        expect(msg).not.toContain('401');
+        expect(msg).not.toContain('500');
+        expect(msg).not.toContain('400');
+      }
     });
   });
 });

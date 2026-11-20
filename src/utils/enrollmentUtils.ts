@@ -84,3 +84,27 @@ export function validateEnrollmentForm(data: EnrollmentFormData): {
 export function isEnrollmentLinkFull(submissionsCount: number, maxSubmissions: number): boolean {
   return submissionsCount >= maxSubmissions;
 }
+
+/**
+ * Maps registration link generation error codes & HTTP status into human-readable user messages.
+ * Never outputs raw JSON, status codes, or stack traces.
+ */
+export function mapEnrollmentError(status?: number, code?: string): string {
+  if (status === 401 || code === 'unauthorized') {
+    return 'Your session has expired. Log in again.';
+  }
+  if ((status === 400 && code === 'invalid_input') || code === 'invalid_input') {
+    return 'Check the number of registrations and the expiry, then try again.';
+  }
+  if (status === 500 || code === 'server_config') {
+    return 'The registration service is not configured. Contact the developer.';
+  }
+  if ((status === 400 && code === 'insert_failed') || code === 'insert_failed') {
+    return 'Could not save the link. Try again in a minute.';
+  }
+  if (status === 0 || code === 'network_error' || code === 'network_failure') {
+    return 'Could not reach the server. Check your connection.';
+  }
+  return 'Could not create the link. Try again.';
+}
+

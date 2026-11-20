@@ -147,8 +147,8 @@ export const BatchFormModal: React.FC<BatchFormModalProps> = ({
                   onClick={() => toggleDay(day)}
                   className={`py-2 px-2.5 rounded-lg text-xs font-semibold border transition-all text-center min-h-[40px] flex items-center justify-center ${
                     isSelected
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs ring-2 ring-indigo-500/30'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                   }`}
                 >
                   {day}
@@ -208,11 +208,11 @@ export const BatchFormModal: React.FC<BatchFormModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 w-full">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting} className="w-full sm:w-auto">
             Cancel
           </Button>
-          <Button type="submit" variant="primary" loading={isSubmitting}>
+          <Button type="submit" variant="primary" loading={isSubmitting} className="w-full sm:w-auto">
             {batch ? 'Update Batch' : 'Create Batch'}
           </Button>
         </div>

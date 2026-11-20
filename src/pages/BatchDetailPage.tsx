@@ -132,17 +132,19 @@ export const BatchDetailPage: React.FC = () => {
           size="sm"
           onClick={() => navigate('/batches')}
           icon={<ArrowLeft className="w-4 h-4" />}
+          className="w-full sm:w-auto"
         >
           Back to Batches List
         </Button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <Button
             type="button"
             variant="secondary"
             size="sm"
             onClick={() => setIsEditModalOpen(true)}
             icon={<Edit2 className="w-3.5 h-3.5" />}
+            className="w-full sm:w-auto"
           >
             Edit Schedule
           </Button>
@@ -151,7 +153,7 @@ export const BatchDetailPage: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={() => setIsDeleteDialogOpen(true)}
-            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30"
+            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 w-full sm:w-auto"
             icon={<Trash2 className="w-3.5 h-3.5" />}
           >
             Delete Batch

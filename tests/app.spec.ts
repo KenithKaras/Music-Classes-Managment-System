@@ -287,7 +287,7 @@ async function setupMockSessionAndRoutes(
     await route.fulfill({
       status: 200,
       contentType: 'image/png',
-      body: Buffer.from('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
+      body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
     });
   });
 
@@ -1879,5 +1879,305 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
 
     // Close modal
     await studentModal.getByRole('button', { name: 'Close dialog' }).click();
+  });
+
+  // ----------------------------------------------------------------------------
+  // 20. REGISTRATION LINK ERROR HANDLING
+  // ----------------------------------------------------------------------------
+  test('20. Registration Link Error Handling: mock 500 server_config, 401 unauthorized, and 200 success in EnrollmentLinkModal', async ({ page }) => {
+    await setupMockSessionAndRoutes(page, 'light');
+
+    await page.route('**/rest/v1/enrollment_links**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+
+    await page.goto('/students');
+    await expect(page.locator('h1', { hasText: 'Students & Batches' })).toBeVisible();
+
+    const sendFormBtn = page.getByRole('button', { name: 'Send registration form' }).filter({ visible: true }).first();
+    await expect(sendFormBtn).toBeVisible();
+    await sendFormBtn.click();
+
+    const linkModal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(linkModal).toBeVisible();
+    await expect(linkModal.locator('h3', { hasText: 'Send Student Registration Form' })).toBeVisible();
+
+    const genLinkBtn = linkModal.getByRole('button', { name: 'Generate Link' });
+
+    // 1. Mock 500 with server_config
+    await page.route('**/functions/v1/create-enrollment-link', async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Failed to create enrollment link', code: 'server_config' }),
+      });
+    });
+
+    await genLinkBtn.click();
+    await expect(
+      linkModal.locator('text=The registration service is not configured. Contact the developer.')
+    ).toBeVisible();
+
+    // 2. Mock 401 with unauthorized
+    await page.route('**/functions/v1/create-enrollment-link', async (route) => {
+      await route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Unauthorized', code: 'unauthorized' }),
+      });
+    });
+
+    await genLinkBtn.click();
+    await expect(
+      linkModal.locator('text=Your session has expired. Log in again.')
+    ).toBeVisible();
+
+    // 3. Mock 200 success
+    await page.route('**/functions/v1/create-enrollment-link', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          url: 'http://localhost:5173/enroll/mock_token_success_123',
+          expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+        }),
+      });
+    });
+
+    await genLinkBtn.click();
+    await expect(linkModal.locator('text=Registration Link Ready!')).toBeVisible();
+
+    await linkModal.getByRole('button', { name: 'Done' }).click();
+    await expect(linkModal).not.toBeVisible();
+  });
+
+  // ----------------------------------------------------------------------------
+  // 21. SCREENSHOT VIEWER & MARK RECEIVED
+  // ----------------------------------------------------------------------------
+  test('21. Screenshot Viewer & Mark Received: view screenshot on fee row, verify metadata, image & mark received action', async ({ page }) => {
+    await setupMockSessionAndRoutes(page, 'light');
+
+    const mockPendingScreenshot = {
+      id: 'ss-fee-2',
+      owner_id: MOCK_USER_ID,
+      payment_link_id: 'link-fee-2',
+      storage_path: 'owner_id/ss-fee-2.png',
+      mime_type: 'image/png',
+      size_bytes: 20480,
+      status: 'pending',
+      reviewed_at: null,
+      created_at: new Date().toISOString(),
+      payment_link: {
+        id: 'link-fee-2',
+        monthly_fee_id: 'fee-2',
+        monthly_fee: {
+          id: 'fee-2',
+          student_id: 'student-2',
+          billing_month: '2026-11-01',
+          amount_due: 3500,
+          amount_paid: 1000,
+          balance: 2500,
+          student: {
+            id: 'student-2',
+            full_name: 'Diya Sharma',
+            phone: '9876543212',
+          },
+        },
+      },
+    };
+
+    await page.route('**/rest/v1/payment_screenshots**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([mockPendingScreenshot]),
+      });
+    });
+
+    await page.route('**/storage/v1/object/sign/payment-screenshots/**', async (route) => {
+      if (route.request().method() === 'POST') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ signedURL: '/object/authenticated/payment-screenshots/mock-signed-url.png?token=mock' }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
+      });
+    });
+
+    await page.goto('/fees');
+    await expect(page.locator('h1', { hasText: 'Fees & Payments' })).toBeVisible();
+
+    // 1. Click "View screenshot" on the fee row (desktop or mobile)
+    const viewBtn = page
+      .locator('tr:has-text("Diya Sharma"), div.p-4:has-text("Diya Sharma")')
+      .getByRole('button', { name: /View screenshot/i })
+      .filter({ visible: true })
+      .first();
+    await expect(viewBtn).toBeVisible({ timeout: 10000 });
+    await viewBtn.click();
+
+    // Screenshot preview modal opens
+    const previewModal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(previewModal).toBeVisible();
+    await expect(previewModal.locator('h3', { hasText: 'Payment Screenshot' })).toBeVisible();
+
+    // Verify metadata inside modal
+    await expect(previewModal.locator('text=Diya Sharma')).toBeVisible();
+    await expect(previewModal.locator('text=November 2026')).toBeVisible();
+
+    // Verify image element has the mocked signed URL
+    const imgEl = previewModal.locator('img[alt="Payment screenshot proof"]');
+    await expect(imgEl).toBeVisible();
+    await expect(imgEl).toHaveAttribute('src', /mock-signed-url\.png/);
+
+    // Click "Mark received" from inside the modal
+    const markReceivedBtn = previewModal.getByRole('button', { name: 'Mark received' });
+    await expect(markReceivedBtn).toBeVisible();
+    await markReceivedBtn.click();
+
+    // RecordPaymentModal opens with UPI preselected and amount = balance (2500)
+    const recordModal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(recordModal).toBeVisible();
+    await expect(recordModal.locator('h3', { hasText: 'Record Fee Payment' })).toBeVisible();
+
+    const methodSelect = recordModal.locator('select');
+    await expect(methodSelect).toHaveValue('upi');
+
+    const amountInput = recordModal.locator('input#payment-amount');
+    await expect(amountInput).toHaveValue('2500');
+
+    // Close modal
+    await recordModal.getByRole('button', { name: 'Close dialog' }).click();
+    await expect(recordModal).not.toBeVisible();
+  });
+
+  // ----------------------------------------------------------------------------
+  // 22. UNPAID FEE ROW DIRECT MARK RECEIVED
+  // ----------------------------------------------------------------------------
+  test('22. Unpaid Fee Row: click Mark received on fee row, opens RecordPaymentModal with UPI preselected and amount = balance', async ({ page }) => {
+    await setupMockSessionAndRoutes(page, 'light');
+
+    await page.goto('/fees');
+    await expect(page.locator('h1', { hasText: 'Fees & Payments' })).toBeVisible();
+
+    // Find unpaid row for Diya Sharma (balance 2500) and click "Mark received"
+    const markRecBtn = page
+      .locator('tr:has-text("Diya Sharma"), div.p-4:has-text("Diya Sharma")')
+      .getByRole('button', { name: /Mark received/i })
+      .filter({ visible: true })
+      .first();
+    await expect(markRecBtn).toBeVisible({ timeout: 10000 });
+    await markRecBtn.click();
+
+    // RecordPaymentModal opens
+    const recordModal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(recordModal).toBeVisible();
+    await expect(recordModal.locator('h3', { hasText: 'Record Fee Payment' })).toBeVisible();
+
+    // Verify method is 'upi'
+    const methodSelect = recordModal.locator('select');
+    await expect(methodSelect).toHaveValue('upi');
+
+    // Verify amount is prefilled to balance (2500)
+    const amountInput = recordModal.locator('input#payment-amount');
+    await expect(amountInput).toHaveValue('2500');
+
+    // Close modal
+    await recordModal.getByRole('button', { name: 'Close dialog' }).click();
+    await expect(recordModal).not.toBeVisible();
+  });
+
+  // ----------------------------------------------------------------------------
+  // 23. ATTENDANCE MODAL CONTRAST (LIGHT AND DARK)
+  // ----------------------------------------------------------------------------
+  test('23. Attendance Modal Contrast: student name contrast ratio >= 4.5:1 against card background and text color != background color in light and dark mode', async ({ page }) => {
+    for (const theme of ['dark', 'light'] as const) {
+      await setupMockSessionAndRoutes(page, theme);
+      await page.goto('/dashboard');
+      await expect(page.locator('h1', { hasText: 'MIX with Me Classes' })).toBeVisible();
+
+      // Find the "Mark" or "Edit" button for today's class
+      const markBtn = page
+        .locator('div:has-text("Guitar Foundations")')
+        .getByRole('button', { name: /^Mark$|^Edit$/ })
+        .filter({ visible: true })
+        .first();
+      await expect(markBtn).toBeVisible({ timeout: 10000 });
+      await markBtn.click();
+
+      // MarkAttendanceModal opens
+      const modal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+      await expect(modal).toBeVisible();
+      await expect(modal.locator('h3', { hasText: /Attendance/i })).toBeVisible();
+
+      // Wait for student list to load
+      const studentNameEl = modal.locator('p.font-semibold:has-text("Aarav Patel"), p.font-semibold:has-text("Diya Sharma")').first();
+      await expect(studentNameEl).toBeVisible();
+
+      // Check computed colors of student name and its card background
+      const colors = await studentNameEl.evaluate((el) => {
+        function getVisibleBackgroundColor(elem: HTMLElement): string {
+          let curr: HTMLElement | null = elem;
+          while (curr && curr !== document.body) {
+            const bg = window.getComputedStyle(curr).backgroundColor;
+            if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+              const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+              if (m && (m[4] === undefined || parseFloat(m[4]) > 0.5)) {
+                return bg;
+              }
+            }
+            curr = curr.parentElement;
+          }
+          return 'rgb(255, 255, 255)';
+        }
+
+        const nameColor = window.getComputedStyle(el).color;
+        const cardBg = getVisibleBackgroundColor(el);
+
+        function parseRgb(str: string): [number, number, number] {
+          const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+          return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])] : [0, 0, 0];
+        }
+
+        function getLuminance([r, g, b]: [number, number, number]): number {
+          const [rs, gs, bs] = [r, g, b].map((c) => {
+            const s = c / 255;
+            return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+          });
+          return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+        }
+
+        function contrast(c1: string, c2: string): number {
+          const l1 = getLuminance(parseRgb(c1));
+          const l2 = getLuminance(parseRgb(c2));
+          const lighter = Math.max(l1, l2);
+          const darker = Math.min(l1, l2);
+          return (lighter + 0.05) / (darker + 0.05);
+        }
+
+        return {
+          nameColor,
+          cardBg,
+          ratio: contrast(nameColor, cardBg),
+        };
+      });
+
+      // Assert student name color does NOT equal background color
+      expect(colors.nameColor).not.toEqual(colors.cardBg);
+
+      // Assert contrast ratio is at least 4.5:1
+      expect(colors.ratio).toBeGreaterThanOrEqual(4.5);
+
+      // Close modal
+      await modal.getByRole('button', { name: 'Close dialog' }).click();
+      await expect(modal).not.toBeVisible();
+    }
   });
 });

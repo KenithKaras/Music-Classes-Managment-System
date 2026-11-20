@@ -315,13 +315,14 @@ export const TimetablePage: React.FC = () => {
         </div>
 
         {/* Top Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => setShowConfigEditor(!showConfigEditor)}
             icon={Sliders}
+            className="w-full sm:w-auto"
           >
             Working Hours &amp; Days
           </Button>
@@ -333,7 +334,7 @@ export const TimetablePage: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowDiscardConfirmModal(true)}
-                className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                className="text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 w-full sm:w-auto"
               >
                 Discard Draft
               </Button>
@@ -344,6 +345,7 @@ export const TimetablePage: React.FC = () => {
                 onClick={() => setShowSaveConfirmModal(true)}
                 icon={Save}
                 disabled={!validationStatus.isValid}
+                className="w-full sm:w-auto"
               >
                 Save Timetable
               </Button>

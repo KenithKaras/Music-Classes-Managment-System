@@ -19,6 +19,8 @@ export interface RecordPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   fee: MonthlyFee | null;
+  initialMethod?: PaymentMethod;
+  initialAmount?: number;
   onSuccess: (payment: Payment) => void;
 }
 
@@ -26,6 +28,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   isOpen,
   onClose,
   fee,
+  initialMethod,
+  initialAmount,
   onSuccess,
 }) => {
   const [amount, setAmount] = useState<number>(0);
@@ -44,16 +48,16 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   useEffect(() => {
     if (fee && isOpen) {
       const balance = fee.balance ?? Math.max(0, fee.amount_due - (fee.amount_paid || 0));
-      setAmount(balance);
+      setAmount(initialAmount !== undefined ? initialAmount : balance);
       setPaymentDate(new Date().toISOString().split('T')[0]);
-      setMethod('cash');
+      setMethod(initialMethod || 'cash');
       setUpiTxnId('');
       setIsUpiConfirming(false);
       setNotes('');
       setErrorMessage(null);
       setDuplicateWarning(null);
     }
-  }, [fee, isOpen]);
+  }, [fee, isOpen, initialMethod, initialAmount]);
 
   if (!fee) return null;
 
@@ -380,7 +384,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
         {/* Notes */}
         <div>
-          <label htmlFor="notes" className="block text-sm font-medium text-slate-700 mb-1">
+          <label htmlFor="notes" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Notes (Optional)
           </label>
           <textarea
@@ -394,8 +398,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 w-full">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting} className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button
@@ -404,6 +408,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             loading={isSubmitting}
             disabled={isSubmitting || !!duplicateWarning || isUpiConfirming}
             icon={CheckCircle2}
+            className="w-full sm:w-auto"
           >
             Record Payment
           </Button>

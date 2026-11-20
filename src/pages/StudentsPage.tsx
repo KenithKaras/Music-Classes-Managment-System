@@ -325,12 +325,13 @@ export const StudentsPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <Button
               type="button"
               variant="outline"
               onClick={() => setIsLinkModalOpen(true)}
               icon={<Send className="w-4 h-4" />}
+              className="w-full sm:w-auto"
             >
               Send registration form
             </Button>
@@ -344,6 +345,7 @@ export const StudentsPage: React.FC = () => {
                 setIsFormModalOpen(true);
               }}
               icon={<Plus className="w-4 h-4" />}
+              className="w-full sm:w-auto"
             >
               Add Student
             </Button>

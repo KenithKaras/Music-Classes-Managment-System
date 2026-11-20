@@ -97,11 +97,11 @@ export const TransferBatchModal: React.FC<TransferBatchModalProps> = ({
 
         {/* Capacity Warning Banner */}
         {isTargetAtCapacity && (
-          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3 text-amber-900 text-xs sm:text-sm">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 flex items-start gap-3 text-amber-900 dark:text-amber-200 text-xs sm:text-sm">
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-amber-900">Batch Capacity Warning</p>
-              <p className="mt-0.5 text-amber-800">
+              <p className="font-semibold text-amber-900 dark:text-amber-200">Batch Capacity Warning</p>
+              <p className="mt-0.5 text-amber-800 dark:text-amber-300">
                 &ldquo;{selectedBatch?.name}&rdquo; is currently at full capacity (
                 {selectedBatch?.student_count}/{selectedBatch?.capacity} students).
                 Transferring this student will exceed the designated batch limit.
@@ -111,8 +111,8 @@ export const TransferBatchModal: React.FC<TransferBatchModalProps> = ({
         )}
 
         {/* Actions */}
-        <div className="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 w-full">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting} className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button
@@ -121,6 +121,7 @@ export const TransferBatchModal: React.FC<TransferBatchModalProps> = ({
             onClick={handleConfirmTransfer}
             loading={isSubmitting}
             icon={<ArrowRightLeft className="w-4 h-4" />}
+            className="w-full sm:w-auto"
           >
             {isTargetAtCapacity ? 'Transfer Anyway' : 'Confirm Transfer'}
           </Button>

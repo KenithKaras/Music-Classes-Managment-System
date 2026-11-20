@@ -435,8 +435,8 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 w-full">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting} className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button
@@ -444,6 +444,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             variant="primary"
             loading={isSubmitting}
             disabled={isUploadingPhoto}
+            className="w-full sm:w-auto"
           >
             {student ? 'Save Changes' : 'Create Student'}
           </Button>

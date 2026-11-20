@@ -122,25 +122,25 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
         )}
 
         {/* Quick Batch Actions & Counter Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs sm:text-sm">
           <div className="flex items-center gap-2">
             <Badge variant="success">Present: {presentCount}</Badge>
             <Badge variant="danger">Absent: {absentCount}</Badge>
-            <span className="text-slate-500 font-medium">Total: {drafts.length}</span>
+            <span className="text-slate-500 dark:text-slate-400 font-medium">Total: {drafts.length}</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => handleMarkAll('present')}
-              className="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1.5 rounded-lg transition-colors min-h-[36px]"
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/60 px-2.5 py-1.5 rounded-lg transition-colors min-h-[36px]"
             >
               All Present
             </button>
             <button
               type="button"
               onClick={() => handleMarkAll('absent')}
-              className="text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1.5 rounded-lg transition-colors min-h-[36px]"
+              className="text-xs font-semibold text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/60 hover:bg-red-100 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-800/60 px-2.5 py-1.5 rounded-lg transition-colors min-h-[36px]"
             >
               All Absent
             </button>
@@ -149,27 +149,27 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
 
         {/* Student Roster List */}
         {loading ? (
-          <div className="py-12 text-center text-slate-500 text-sm">
-            <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin mx-auto mb-2" />
+          <div className="py-12 text-center text-slate-500 dark:text-slate-400 text-sm">
+            <div className="w-6 h-6 border-2 border-slate-300 dark:border-slate-700 border-t-slate-800 dark:border-t-slate-200 rounded-full animate-spin mx-auto mb-2" />
             Loading enrolled students...
           </div>
         ) : drafts.length === 0 ? (
-          <div className="py-8 text-center text-slate-500 text-sm">
-            <p className="font-medium text-slate-700">No active students in this batch.</p>
-            <p className="text-xs text-slate-400 mt-1">
+          <div className="py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
+            <p className="font-medium text-slate-700 dark:text-slate-300">No active students in this batch.</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
               Add or transfer students to this batch first to record their attendance.
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 max-h-[50vh] overflow-y-auto pr-1 space-y-1">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[50vh] overflow-y-auto pr-1 space-y-1">
             {drafts.map(({ student, status }) => (
               <div
                 key={student.id}
-                className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/70 p-2 rounded-lg transition-colors"
+                className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 p-2 rounded-lg transition-colors"
               >
                 {/* Student Info */}
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
                     {student.photo_url ? (
                       <img
                         src={student.photo_url}
@@ -177,14 +177,14 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <User className="w-5 h-5 text-slate-400" />
+                      <User className="w-5 h-5 text-slate-400 dark:text-slate-300" />
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-900 text-sm truncate">
+                    <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
                       {student.full_name}
                     </p>
-                    <p className="text-xs text-slate-500 truncate">{student.phone || 'No phone'}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 break-all">{student.phone || 'No phone'}</p>
                   </div>
                 </div>
 
@@ -195,8 +195,8 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
                     onClick={() => handleStatusChange(student.id, 'present')}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all min-h-[42px] ${
                       status === 'present'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs ring-2 ring-emerald-600/30'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs ring-2 ring-emerald-600/30 dark:ring-emerald-400/40'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-200 dark:hover:border-emerald-800/60'
                     }`}
                   >
                     <Check className="w-4 h-4" />
@@ -208,8 +208,8 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
                     onClick={() => handleStatusChange(student.id, 'absent')}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all min-h-[42px] ${
                       status === 'absent'
-                        ? 'bg-red-600 text-white border-red-600 shadow-2xs ring-2 ring-red-600/30'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200'
+                        ? 'bg-red-600 text-white border-red-600 shadow-2xs ring-2 ring-red-600/30 dark:ring-red-400/40'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-700 dark:hover:text-red-300 hover:border-red-200 dark:hover:border-red-800/60'
                     }`}
                   >
                     <X className="w-4 h-4" />
@@ -222,8 +222,8 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
         )}
 
         {/* Action Buttons */}
-        <div className="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 w-full">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting} className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button
@@ -233,6 +233,7 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
             loading={isSubmitting}
             disabled={drafts.length === 0}
             icon={<CheckCircle2 className="w-4 h-4" />}
+            className="w-full sm:w-auto"
           >
             Save Attendance
           </Button>
