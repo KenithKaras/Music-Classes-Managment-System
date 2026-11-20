@@ -136,7 +136,7 @@ export const FeesPage: React.FC = () => {
           created_at,
           payment_link:payment_links (
             id,
-            monthly_fee_id,
+            fee_id,
             monthly_fee:monthly_fees (
               id,
               billing_month,
@@ -152,7 +152,14 @@ export const FeesPage: React.FC = () => {
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (!error && data) {
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.warn('Could not load payment screenshots:', error);
+        }
+        return;
+      }
+
+      if (data) {
         setPendingScreenshots(data as unknown as PaymentScreenshot[]);
       }
     } catch (err) {
@@ -223,11 +230,15 @@ export const FeesPage: React.FC = () => {
     }
   };
 
+  const getScreenshotFeeId = (s: PaymentScreenshot): string | undefined =>
+    s.payment_link?.fee_id || s.payment_link?.monthly_fee_id || s.payment_link?.monthly_fee?.id;
+
   const feeIdsWithScreenshot = React.useMemo(() => {
     const set = new Set<string>();
     pendingScreenshots.forEach((s) => {
-      if (s.payment_link?.monthly_fee_id) {
-        set.add(s.payment_link.monthly_fee_id);
+      const feeId = getScreenshotFeeId(s);
+      if (feeId) {
+        set.add(feeId);
       }
     });
     return set;
@@ -236,8 +247,9 @@ export const FeesPage: React.FC = () => {
   const screenshotsByFeeId = React.useMemo(() => {
     const map = new Map<string, PaymentScreenshot>();
     pendingScreenshots.forEach((s) => {
-      if (s.payment_link?.monthly_fee_id) {
-        map.set(s.payment_link.monthly_fee_id, s);
+      const feeId = getScreenshotFeeId(s);
+      if (feeId) {
+        map.set(feeId, s);
       }
     });
     return map;
@@ -1671,7 +1683,9 @@ export const FeesPage: React.FC = () => {
                 type="button"
                 variant="primary"
                 onClick={() => {
-                  const feeId = selectedScreenshot.payment_link?.monthly_fee_id;
+                  const feeId =
+                    selectedScreenshot.payment_link?.fee_id ||
+                    selectedScreenshot.payment_link?.monthly_fee_id;
                   const matchedFee =
                     monthlyFees.find((f) => f.id === feeId) ||
                     overdueFees.find((f) => f.id === feeId) ||

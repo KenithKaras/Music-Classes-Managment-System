@@ -62,6 +62,7 @@ const MOCK_ACADEMY = {
   upi_id: 'academy@okhdfcbank',
   upi_payee_name: 'MIX with Me Classes',
   upi_qr_path: '11111111-1111-1111-1111-111111111111/upi/qr.png',
+  footer_credit: 'Made by Kenith Karas',
   working_hours_config: {
     workingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
     weekdayWindow: { startTime: '14:00', endTime: '21:00' },
@@ -1053,6 +1054,11 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     const payeeInput = page.getByRole('textbox', { name: 'Payee Name' });
     await expect(payeeInput).toBeVisible();
 
+    // Verify Footer Credit input in Academy Profile
+    const footerCreditInput = page.getByRole('textbox', { name: 'Footer credit' });
+    await expect(footerCreditInput).toBeVisible();
+    await expect(footerCreditInput).toHaveValue('Made by Kenith Karas');
+
     // Verify QR Code Preview
     await expect(page.locator('img[alt="UPI QR Code"]')).toBeVisible();
     await expect(page.locator('button:has-text("Replace QR (Upload)")')).toBeVisible();
@@ -1147,21 +1153,30 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     const utrInput = modal.locator('input[placeholder*="334455667788"]');
     await expect(utrInput).toBeVisible();
 
-    // 1. Submit without UTR -> validation error
-    await modal.locator('button:has-text("Record Payment")').click();
-    await expect(modal.locator('text=UPI Transaction ID (UTR) is required.')).toBeVisible();
-
-    // 2. Submit short UTR -> format validation error
+    // 1. Submit short UTR -> format validation error
     await utrInput.fill('ABC');
     await modal.locator('button:has-text("Record Payment")').click();
     await expect(modal.locator('text=UPI Transaction ID (UTR) must be 6 to 35 letters and digits.')).toBeVisible();
 
-    // 3. Submit duplicate UTR -> duplicate error
+    // 2. Submit duplicate UTR -> duplicate error
     await utrInput.fill('DUPLICATE123');
     await modal.locator('button:has-text("Record Payment")').click();
     await expect(modal.locator('text=This transaction ID is already recorded for Aarav Patel.')).toBeVisible();
 
-    // 4. Submit valid UTR -> verification prompt appears
+    // 3. Clear UTR -> UTR is optional, prompt appears directly without validation error
+    await utrInput.fill('');
+    await modal.locator('button:has-text("Record Payment")').click();
+    const promptBannerOptional = modal.locator('text=Confirm you have received');
+    await expect(promptBannerOptional).toBeVisible();
+    await expect(modal.locator('text=This will mark the fee as paid.')).toBeVisible();
+    await expect(modal.locator('text=/UTR:/')).not.toBeVisible();
+
+    // Dismiss prompt by clicking Cancel inside the verification prompt banner
+    const promptCancelBtn = modal.locator('div.bg-indigo-50, div.dark\\:bg-indigo-950\\/40').getByRole('button', { name: 'Cancel' });
+    await promptCancelBtn.click();
+    await expect(promptBannerOptional).not.toBeVisible();
+
+    // 4. Submit valid UTR -> verification prompt appears with UTR
     await utrInput.fill('VALIDUTR123456');
     await modal.locator('button:has-text("Record Payment")').click();
 
@@ -1169,6 +1184,7 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     const promptBanner = modal.locator('text=Confirm you have received');
     await expect(promptBanner).toBeVisible();
     await expect(modal.locator('text=This will mark the fee as paid.')).toBeVisible();
+    await expect(modal.locator('text=UTR: VALIDUTR123456')).toBeVisible();
 
     // Click "Yes, Received & Record"
     const confirmBtn = modal.locator('button:has-text("Yes, Received & Record")');
@@ -1626,7 +1642,7 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
       created_at: new Date().toISOString(),
       payment_link: {
         id: 'link-111',
-        monthly_fee_id: 'fee-1',
+        fee_id: 'fee-1',
         monthly_fee: {
           id: 'fee-1',
           student_id: 'student-1',
@@ -1970,7 +1986,7 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
       created_at: new Date().toISOString(),
       payment_link: {
         id: 'link-fee-2',
-        monthly_fee_id: 'fee-2',
+        fee_id: 'fee-2',
         monthly_fee: {
           id: 'fee-2',
           student_id: 'student-2',
@@ -2013,6 +2029,12 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
 
     await page.goto('/fees');
     await expect(page.locator('h1', { hasText: 'Fees & Payments' })).toBeVisible();
+
+    // Confirm "View screenshot" button appears only on Diya Sharma (fee-2) and NOT on Aarav Patel (fee-1)
+    const aaravViewBtn = page
+      .locator('tr:has-text("Aarav Patel"), div.p-4:has-text("Aarav Patel")')
+      .getByRole('button', { name: /View screenshot/i });
+    await expect(aaravViewBtn).not.toBeVisible();
 
     // 1. Click "View screenshot" on the fee row (desktop or mobile)
     const viewBtn = page
@@ -2179,5 +2201,126 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
       await modal.getByRole('button', { name: 'Close dialog' }).click();
       await expect(modal).not.toBeVisible();
     }
+  });
+
+  // ----------------------------------------------------------------------------
+  // 24. PENDING SCREENSHOT SPECIFIC FEE ID MAPPING (KENITH KARAS)
+  // ----------------------------------------------------------------------------
+  test('24. Pending Screenshot Mapping: mock pending screenshots for Kenith Karas fee id 0adea4e8-f7b0-4b49-be0e-0b43862cf1d0 and confirm "View screenshot" appears only on that row', async ({ page }) => {
+    await setupMockSessionAndRoutes(page, 'light');
+
+    const kenithFeeId = '0adea4e8-f7b0-4b49-be0e-0b43862cf1d0';
+    const kenithStudent = {
+      id: 'student-kenith',
+      owner_id: MOCK_USER_ID,
+      full_name: 'Kenith Karas',
+      email: 'kenith@example.com',
+      phone: '8262829614',
+      status: 'active',
+      enrollment_date: '2026-01-01',
+      created_at: '2026-01-01T00:00:00Z',
+      batch: null,
+    };
+
+    const feesWithKenith = [
+      ...MOCK_FEES,
+      {
+        id: kenithFeeId,
+        owner_id: MOCK_USER_ID,
+        student_id: 'student-kenith',
+        billing_month: '2026-11-01',
+        amount_due: 3000,
+        amount_paid: 0,
+        balance: 3000,
+        due_date: '2026-11-10',
+        status: 'pending',
+        created_at: '2026-11-01T00:00:00Z',
+        student: kenithStudent,
+        payments: [],
+      },
+    ];
+
+    // Override monthly_fees route to include Kenith Karas
+    await page.route('**/rest/v1/monthly_fees**', async (route) => {
+      const url = route.request().url();
+      if (url.includes('limit=1') || url.includes('select=count')) {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(feesWithKenith[0]) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(feesWithKenith) });
+    });
+
+    // Mock pending screenshot linked specifically to Kenith's fee via fee_id
+    const mockKenithScreenshot = {
+      id: 'ss-kenith-1',
+      owner_id: MOCK_USER_ID,
+      payment_link_id: 'link-kenith-1',
+      storage_path: 'owner_id/ss-kenith.png',
+      mime_type: 'image/png',
+      size_bytes: 25000,
+      status: 'pending',
+      reviewed_at: null,
+      created_at: new Date().toISOString(),
+      payment_link: {
+        id: 'link-kenith-1',
+        fee_id: kenithFeeId,
+        monthly_fee: {
+          id: kenithFeeId,
+          student_id: 'student-kenith',
+          billing_month: '2026-11-01',
+          amount_due: 3000,
+          student: {
+            id: 'student-kenith',
+            full_name: 'Kenith Karas',
+            phone: '8262829614',
+          },
+        },
+      },
+    };
+
+    await page.route('**/rest/v1/payment_screenshots**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([mockKenithScreenshot]),
+      });
+    });
+
+    await page.goto('/fees');
+    await expect(page.locator('h1', { hasText: 'Fees & Payments' })).toBeVisible();
+
+    // Confirm "View screenshot" button is visible on Kenith Karas row
+    const kenithViewBtn = page
+      .locator('tbody tr:has-text("Kenith Karas"), div.divide-y div.p-4:has-text("Kenith Karas")')
+      .filter({ visible: true })
+      .getByRole('button', { name: /View screenshot/i });
+    await expect(kenithViewBtn.first()).toBeVisible({ timeout: 5000 });
+
+    // Confirm "View screenshot" button is NOT visible on Aarav Patel row
+    const aaravViewBtn = page
+      .locator('tbody tr:has-text("Aarav Patel"), div.divide-y div.p-4:has-text("Aarav Patel")')
+      .filter({ visible: true })
+      .getByRole('button', { name: /View screenshot/i });
+    await expect(aaravViewBtn).not.toBeVisible();
+  });
+
+  // ----------------------------------------------------------------------------
+  // 25. DEFAULT THEME: LIGHT & PUBLIC PAGE FOOTER CREDIT
+  // ----------------------------------------------------------------------------
+  test('25. Default Theme: first-time visitors default to light theme; public pages show "Made by Kenith Karas" footer', async ({ page }) => {
+    // 1. Visit landing page without setting localStorage mix_theme (first-time visitor)
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    const isDark = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+    expect(isDark).toBe(false);
+
+    // 2. Public /pay page displays "Made by Kenith Karas"
+    await page.goto('/pay?token=invalid_test_token', { waitUntil: 'domcontentloaded' });
+    const payFooter = page.locator('text=Made by Kenith Karas');
+    await expect(payFooter).toBeVisible();
+
+    // 3. Public /enroll page displays "Made by Kenith Karas"
+    await page.goto('/enroll/test-link-token', { waitUntil: 'domcontentloaded' });
+    const enrollFooter = page.locator('text=Made by Kenith Karas');
+    await expect(enrollFooter).toBeVisible();
   });
 });

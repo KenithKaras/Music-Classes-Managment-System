@@ -52,6 +52,7 @@ export const SettingsPage: React.FC = () => {
   const [defaultMonthlyFee, setDefaultMonthlyFee] = useState<number>(1500);
   const [initialDefaultFee, setInitialDefaultFee] = useState<number>(1500);
   const [paymentDueDay, setPaymentDueDay] = useState<number>(5);
+  const [footerCredit, setFooterCredit] = useState('Made by Kenith Karas');
 
   // Payment Details (UPI)
   const [upiId, setUpiId] = useState('');
@@ -97,6 +98,7 @@ export const SettingsPage: React.FC = () => {
         setDefaultMonthlyFee(data.default_monthly_fee ?? 1500);
         setInitialDefaultFee(data.default_monthly_fee ?? 1500);
         setPaymentDueDay(data.payment_due_day ?? 5);
+        setFooterCredit(data.footer_credit ?? 'Made by Kenith Karas');
         setUpiId(data.upi_id || '');
         setUpiPayeeName(data.upi_payee_name || '');
         setUpiQrPath(data.upi_qr_path || null);
@@ -365,6 +367,7 @@ export const SettingsPage: React.FC = () => {
         upi_id: upiId.trim() ? upiId.trim().toLowerCase() : null,
         upi_payee_name: upiPayeeName.trim() ? formatPayeeName(upiPayeeName, academyName) : null,
         upi_qr_path: upiQrPath,
+        footer_credit: footerCredit.trim() || 'Made by Kenith Karas',
       });
 
       if (error || !updated) {
@@ -503,6 +506,17 @@ export const SettingsPage: React.FC = () => {
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="e.g. 102 Harmony Lane, Indiranagar, Bengaluru"
                   className="block w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--input-text)] placeholder-[var(--input-placeholder)] px-3 py-2 text-sm transition-colors focus-visible:border-indigo-600 dark:focus-visible:border-indigo-400"
+                />
+              </div>
+
+              {/* Footer Credit */}
+              <div className="md:col-span-2">
+                <Input
+                  label="Footer credit"
+                  value={footerCredit}
+                  onChange={(e) => setFooterCredit(e.target.value)}
+                  placeholder="e.g. Made by Kenith Karas"
+                  helperText="Displayed at the bottom of public pages and receipts."
                 />
               </div>
             </div>

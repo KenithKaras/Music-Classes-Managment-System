@@ -109,6 +109,7 @@ export async function updateAcademySettings(
     if (data.upi_id !== undefined) payload.upi_id = data.upi_id ? data.upi_id.trim().toLowerCase() : null;
     if (data.upi_payee_name !== undefined) payload.upi_payee_name = data.upi_payee_name ? data.upi_payee_name.trim().slice(0, 60) : null;
     if (data.upi_qr_path !== undefined) payload.upi_qr_path = data.upi_qr_path;
+    if (data.footer_credit !== undefined) payload.footer_credit = data.footer_credit ? data.footer_credit.trim() : null;
 
     let query = supabase.from('academy_settings').update(payload);
 

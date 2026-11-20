@@ -77,13 +77,26 @@ describe('UPI Utils - Validators, Encoders & Business Logic', () => {
       }
     });
 
-    it('rejects empty, too short (<6), too long (>35), or special characters', () => {
-      expect(validateUpiTxnId('').isValid).toBe(false);
+    it('accepts empty string and whitespace as valid because UTR is optional', () => {
+      const emptyRes = validateUpiTxnId('');
+      expect(emptyRes.isValid).toBe(true);
+      expect(emptyRes.error).toBeNull();
+      expect(emptyRes.formatted).toBe('');
+
+      const wsRes = validateUpiTxnId('   ');
+      expect(wsRes.isValid).toBe(true);
+      expect(wsRes.error).toBeNull();
+      expect(wsRes.formatted).toBe('');
+    });
+
+    it('rejects too short (<6), too long (>35), or special characters', () => {
       expect(validateUpiTxnId('12345').isValid).toBe(false); // only 5 chars
       expect(validateUpiTxnId('123456789012345678901234567890123456').isValid).toBe(false); // 36 chars
       expect(validateUpiTxnId('UTR-123456').isValid).toBe(false); // contains hyphen
       expect(validateUpiTxnId('UTR_123456').isValid).toBe(false); // contains underscore
       expect(validateUpiTxnId('UTR 123456').isValid).toBe(false); // contains space
+      expect(validateUpiTxnId('UTR@123').isValid).toBe(false); // contains @ symbol
+      expect(validateUpiTxnId('UTR#12345').isValid).toBe(false); // contains # symbol
     });
   });
 

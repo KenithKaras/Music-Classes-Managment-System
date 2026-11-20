@@ -93,23 +93,26 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
     }
 
     // UPI-specific validations
-    let cleanedUtr: string | undefined = undefined;
+    let cleanedUtr: string | null = null;
     if (method === 'upi') {
-      const utrValidation = validateUpiTxnId(upiTxnId);
-      if (!utrValidation.isValid) {
-        setErrorMessage(utrValidation.error || 'Please enter a valid UPI Transaction ID (UTR).');
-        return;
-      }
-      cleanedUtr = utrValidation.formatted;
+      const trimmedUtr = upiTxnId.trim();
+      if (trimmedUtr) {
+        const utrValidation = validateUpiTxnId(trimmedUtr);
+        if (!utrValidation.isValid) {
+          setErrorMessage(utrValidation.error || 'Please enter a valid UPI Transaction ID (UTR).');
+          return;
+        }
+        cleanedUtr = utrValidation.formatted;
 
-      setIsSubmitting(true);
-      const dupUtrCheck = await checkDuplicateUpiTxnId(cleanedUtr);
-      if (dupUtrCheck.isDuplicate) {
-        setErrorMessage(
-          `This transaction ID is already recorded for ${dupUtrCheck.studentName || 'another student'}.`
-        );
-        setIsSubmitting(false);
-        return;
+        setIsSubmitting(true);
+        const dupUtrCheck = await checkDuplicateUpiTxnId(cleanedUtr);
+        if (dupUtrCheck.isDuplicate) {
+          setErrorMessage(
+            `This transaction ID is already recorded for ${dupUtrCheck.studentName || 'another student'}.`
+          );
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       // Prompt before saving for UPI
@@ -145,7 +148,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
         amount,
         payment_date: paymentDate,
         method,
-        upi_txn_id: cleanedUtr,
+        upi_txn_id: cleanedUtr || null,
         notes,
       });
 
@@ -160,7 +163,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
         const { data: links } = await supabase
           .from('payment_links')
           .select('id')
-          .eq('monthly_fee_id', fee.id);
+          .eq('fee_id', fee.id);
         if (links && links.length > 0) {
           const linkIds = links.map((l: { id: string }) => l.id);
           await supabase
@@ -268,9 +271,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 <p className="mt-1">
                   Confirm you have received <strong>{formatIndianCurrency(amount)}</strong> in your UPI app. This will mark the fee as <strong>{willBeStatus}</strong>.
                 </p>
-                <p className="mt-1 text-xs text-indigo-700 dark:text-indigo-300 font-mono">
-                  UTR: {upiTxnId}
-                </p>
+                {upiTxnId.trim() && (
+                  <p className="mt-1 text-xs text-indigo-700 dark:text-indigo-300 font-mono">
+                    UTR: {upiTxnId.trim().toUpperCase()}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2 pt-1">
@@ -369,7 +374,6 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           <div>
             <Input
               label="UPI Transaction ID (UTR)"
-              required
               value={upiTxnId}
               onChange={(e) => {
                 setUpiTxnId(e.target.value.toUpperCase().trim());
@@ -377,7 +381,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 setIsUpiConfirming(false);
               }}
               placeholder="e.g. 334455667788"
-              helperText="6 to 35 alphanumeric characters from the student's UPI payment receipt."
+              helperText="Optional. 6 to 35 letters and digits from the payment receipt."
             />
           </div>
         )}

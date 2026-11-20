@@ -421,6 +421,11 @@ export const PayPage: React.FC = () => {
             </div>
           </>
         )}
+
+        {/* Footer Credit */}
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-6">
+          Made by Kenith Karas
+        </p>
       </div>
     </div>
   );

@@ -137,13 +137,14 @@ export function dataUrlToBlob(dataUrl: string, fallbackMime = 'image/png'): Blob
 /**
  * Validates a UPI Transaction ID / UTR number.
  * Rule: 6 to 35 alphanumeric characters, stored in uppercase.
+ * Optional: empty string is accepted as valid.
  */
 export function validateUpiTxnId(utr: string): { isValid: boolean; error: string | null; formatted: string } {
   const cleaned = utr.trim().toUpperCase();
   if (!cleaned) {
     return {
-      isValid: false,
-      error: 'UPI Transaction ID (UTR) is required.',
+      isValid: true,
+      error: null,
       formatted: '',
     };
   }

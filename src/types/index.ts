@@ -26,6 +26,7 @@ export interface AcademySettings {
   upi_id?: string | null;
   upi_payee_name?: string | null;
   upi_qr_path?: string | null;
+  footer_credit?: string | null;
   created_at?: string;
   updated_at: string;
 }
@@ -253,7 +254,7 @@ export interface RecordPaymentFormData {
   amount: number;
   payment_date: string;
   method: PaymentMethod;
-  upi_txn_id?: string;
+  upi_txn_id?: string | null;
   notes?: string;
 }
 
@@ -309,6 +310,7 @@ export interface AcademySettingsFormData {
   address: string;
   default_monthly_fee: number;
   payment_due_day: number;
+  footer_credit?: string;
 }
 
 export interface BackupMetadata {
@@ -402,7 +404,8 @@ export interface PaymentScreenshot {
   created_at: string;
   payment_link?: {
     id: string;
-    monthly_fee_id: string;
+    fee_id?: string;
+    monthly_fee_id?: string;
     monthly_fee?: {
       id: string;
       student_id: string;

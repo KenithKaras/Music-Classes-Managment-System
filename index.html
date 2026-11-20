@@ -9,8 +9,7 @@
       (function() {
         try {
           var saved = localStorage.getItem('mix_theme');
-          var isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          if (isDark) {
+          if (saved === 'dark') {
             document.documentElement.classList.add('dark');
           } else {
             document.documentElement.classList.remove('dark');
