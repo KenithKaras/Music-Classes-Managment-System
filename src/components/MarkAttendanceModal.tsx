@@ -8,8 +8,9 @@ import {
   type StudentAttendanceDraft,
 } from '../services/attendanceService';
 import type { ClassSession, AttendanceStatus } from '../types';
-import { User, Check, X, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Check, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { formatTimeAmPm } from '../utils/attendanceUtils';
+import { StudentAvatar } from './StudentAvatar';
 
 interface MarkAttendanceModalProps {
   isOpen: boolean;
@@ -169,17 +170,11 @@ export const MarkAttendanceModal: React.FC<MarkAttendanceModalProps> = ({
               >
                 {/* Student Info */}
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-                    {student.photo_url ? (
-                      <img
-                        src={student.photo_url}
-                        alt={student.full_name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <User className="w-5 h-5 text-slate-400 dark:text-slate-300" />
-                    )}
-                  </div>
+                  <StudentAvatar
+                    photoUrl={student.photo_url}
+                    name={student.full_name}
+                    className="w-10 h-10"
+                  />
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
                       {student.full_name}

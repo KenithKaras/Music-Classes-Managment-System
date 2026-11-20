@@ -9,10 +9,10 @@ import {
   Edit2,
   Trash2,
   ArrowRightLeft,
-  User,
   Layers,
   Send,
   Camera,
+  RefreshCw,
 } from 'lucide-react';
 import { getStudents, createStudent, updateStudent, deleteStudent, transferStudentBatch } from '../services/studentService';
 import { getBatches } from '../services/batchService';
@@ -30,6 +30,11 @@ import { TransferBatchModal } from '../components/TransferBatchModal';
 import { EnrollmentLinkModal } from '../components/EnrollmentLinkModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Tabs } from '../components/Tabs';
+import { StudentAvatar } from '../components/StudentAvatar';
+import {
+  selectSubmissionsNeedingBackfill,
+  copyEnrollmentPhotoToStudentPhotos,
+} from '../utils/studentPhotoUtils';
 import { formatDisplayDate } from '../utils/formUtils';
 import { formatIndianCurrency } from '../utils/feeUtils';
 import { useDebounce } from '../hooks/useDebounce';
@@ -61,25 +66,38 @@ export const StudentsPage: React.FC = () => {
 
   // Enrollment (Feature B) state
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [allSubmissions, setAllSubmissions] = useState<EnrollmentSubmission[]>([]);
+  const [allStudentsForBackfill, setAllStudentsForBackfill] = useState<Student[]>([]);
   const [pendingSubmissions, setPendingSubmissions] = useState<EnrollmentSubmission[]>([]);
   const [approvingSubmission, setApprovingSubmission] = useState<EnrollmentSubmission | null>(null);
   const [prefilledFormData, setPrefilledFormData] = useState<Partial<StudentFormData> | undefined>(undefined);
   const [viewingPhotoUrl, setViewingPhotoUrl] = useState<string | null>(null);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+  const [backfillProgress, setBackfillProgress] = useState<string | null>(null);
+  const [backfillResult, setBackfillResult] = useState<string | null>(null);
+  const [copyPhotoError, setCopyPhotoError] = useState<string | null>(null);
+  const [isCopyingPhotoId, setIsCopyingPhotoId] = useState<string | null>(null);
 
   const [transferStudent, setTransferStudent] = useState<Student | null>(null);
 
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Compute submissions needing photo backfill (pure selector)
+  const backfillCandidates = useMemo(() => {
+    return selectSubmissionsNeedingBackfill(allSubmissions, allStudentsForBackfill);
+  }, [allSubmissions, allStudentsForBackfill]);
+
   const loadSubmissions = async () => {
     try {
       const { data, error } = await supabase
         .from('enrollment_submissions')
         .select('*')
-        .eq('status', 'pending')
         .order('created_at', { ascending: false });
       if (!error && data) {
-        setPendingSubmissions(data as EnrollmentSubmission[]);
+        const subs = data as EnrollmentSubmission[];
+        setAllSubmissions(subs);
+        setPendingSubmissions(subs.filter((s) => s.status === 'pending'));
       }
     } catch (err) {
       if (import.meta.env.DEV) {
@@ -118,6 +136,15 @@ export const StudentsPage: React.FC = () => {
 
     if (batchesRes.batches) {
       setBatches(batchesRes.batches);
+    }
+
+    try {
+      const { data: allStuds } = await supabase.from('students').select('*');
+      if (allStuds) {
+        setAllStudentsForBackfill(allStuds as Student[]);
+      }
+    } catch {
+      // Fallback
     }
 
     await loadSubmissions();
@@ -184,7 +211,74 @@ export const StudentsPage: React.FC = () => {
     return true;
   };
 
-  const handleApproveSubmission = (sub: EnrollmentSubmission) => {
+  const handleRunBackfill = async () => {
+    if (isBackfilling || backfillCandidates.length === 0) return;
+    setIsBackfilling(true);
+    setBackfillProgress(`Copying 1 of ${backfillCandidates.length}...`);
+    setBackfillResult(null);
+
+    let copied = 0;
+    const failedNames: string[] = [];
+
+    for (let i = 0; i < backfillCandidates.length; i++) {
+      const { submission, student } = backfillCandidates[i];
+      setBackfillProgress(`Copying ${i + 1} of ${backfillCandidates.length}...`);
+
+      // Never overwrite an existing student photo_url
+      if (student.photo_url) {
+        continue;
+      }
+
+      try {
+        const { path, error } = await copyEnrollmentPhotoToStudentPhotos(submission.photo_path!);
+        if (error || !path) {
+          failedNames.push(student.full_name);
+        } else {
+          const { error: updateErr } = await supabase
+            .from('students')
+            .update({ photo_url: path })
+            .eq('id', student.id);
+
+          if (updateErr) {
+            failedNames.push(student.full_name);
+          } else {
+            copied++;
+          }
+        }
+      } catch {
+        failedNames.push(student.full_name);
+      }
+    }
+
+    setIsBackfilling(false);
+    setBackfillProgress(null);
+
+    const resultMsg = `Copied ${copied} photos. ${failedNames.length} failed.${
+      failedNames.length > 0 ? ` Failed: ${failedNames.join(', ')}` : ''
+    }`;
+    setBackfillResult(resultMsg);
+
+    queryClient.invalidateQueries({ queryKey: ['students'] });
+    await loadData();
+    await loadSubmissions();
+  };
+
+  const handleApproveSubmission = async (sub: EnrollmentSubmission) => {
+    setCopyPhotoError(null);
+    let copiedPhotoPath: string | null = null;
+
+    if (sub.photo_path) {
+      setIsCopyingPhotoId(sub.id);
+      const { path, error } = await copyEnrollmentPhotoToStudentPhotos(sub.photo_path);
+      setIsCopyingPhotoId(null);
+
+      if (error || !path) {
+        setCopyPhotoError('Could not copy the photo. Try again.');
+        return;
+      }
+      copiedPhotoPath = path;
+    }
+
     setApprovingSubmission(sub);
     setEditingStudent(null);
     const matchingBatch = batches.find(
@@ -199,7 +293,7 @@ export const StudentsPage: React.FC = () => {
       address: sub.address || '',
       batch_id: matchingBatch?.id || null,
       enrollment_date: new Date().toISOString().split('T')[0],
-      photo_url: null,
+      photo_url: copiedPhotoPath,
     });
     setIsFormModalOpen(true);
   };
@@ -326,6 +420,24 @@ export const StudentsPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            {backfillCandidates.length > 0 && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={isBackfilling}
+                onClick={handleRunBackfill}
+                icon={
+                  isBackfilling ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Camera className="w-4 h-4" />
+                  )
+                }
+                className="w-full sm:w-auto text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800"
+              >
+                {isBackfilling ? backfillProgress || 'Copying...' : 'Copy registration photos'}
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -363,6 +475,40 @@ export const StudentsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Backfill Result / Progress Banner */}
+      {backfillResult && (
+        <div
+          role="status"
+          className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300 text-sm flex items-center justify-between"
+        >
+          <span>{backfillResult}</span>
+          <button
+            type="button"
+            onClick={() => setBackfillResult(null)}
+            className="text-xs text-emerald-700 dark:text-emerald-400 font-medium hover:underline ml-4"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Photo Copy Error Banner */}
+      {copyPhotoError && (
+        <div
+          role="alert"
+          className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-sm flex items-center justify-between"
+        >
+          <span>{copyPhotoError}</span>
+          <button
+            type="button"
+            onClick={() => setCopyPhotoError(null)}
+            className="text-xs text-rose-700 dark:text-rose-400 font-medium hover:underline ml-4"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Pending Registrations Section (Feature B) */}
       {pendingSubmissions.length > 0 && (
         <div className="bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl p-4 sm:p-5 shadow-xs">
@@ -391,13 +537,21 @@ export const StudentsPage: React.FC = () => {
                 >
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
-                          {sub.child_name}
-                        </h4>
-                        <p className="text-xs text-slate-600 dark:text-slate-300">
-                          Parent: {sub.parent_name} ({sub.parent_phone})
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <StudentAvatar
+                          photoUrl={sub.photo_path}
+                          name={sub.child_name}
+                          bucket="enrollment-photos"
+                          className="w-10 h-10"
+                        />
+                        <div>
+                          <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                            {sub.child_name}
+                          </h4>
+                          <p className="text-xs text-slate-600 dark:text-slate-300">
+                            Parent: {sub.parent_name} ({sub.parent_phone})
+                          </p>
+                        </div>
                       </div>
                       <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 font-semibold px-2 py-0.5 rounded-full">
                         Pending
@@ -448,9 +602,10 @@ export const StudentsPage: React.FC = () => {
                       size="sm"
                       variant="primary"
                       className="flex-1 text-xs"
+                      disabled={isCopyingPhotoId === sub.id}
                       onClick={() => handleApproveSubmission(sub)}
                     >
-                      Approve
+                      {isCopyingPhotoId === sub.id ? 'Copying photo...' : 'Approve'}
                     </Button>
                     <Button
                       size="sm"
@@ -578,17 +733,11 @@ export const StudentsPage: React.FC = () => {
                     {/* Student Avatar & Name */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] overflow-hidden flex items-center justify-center shrink-0">
-                          {student.photo_url ? (
-                            <img
-                              src={student.photo_url}
-                              alt={student.full_name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <User className="w-5 h-5 text-slate-400" />
-                          )}
-                        </div>
+                        <StudentAvatar
+                          photoUrl={student.photo_url}
+                          name={student.full_name}
+                          className="w-10 h-10"
+                        />
                         <div>
                           <Link
                             to={`/students/${student.id}`}
@@ -702,17 +851,11 @@ export const StudentsPage: React.FC = () => {
                 {/* Header: Photo, Name, Status */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] overflow-hidden flex items-center justify-center shrink-0">
-                      {student.photo_url ? (
-                        <img
-                          src={student.photo_url}
-                          alt={student.full_name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <User className="w-6 h-6 text-slate-400" />
-                      )}
-                    </div>
+                    <StudentAvatar
+                      photoUrl={student.photo_url}
+                      name={student.full_name}
+                      className="w-12 h-12"
+                    />
                     <div>
                       <Link
                         to={`/students/${student.id}`}

@@ -7,7 +7,6 @@ import {
   Clock,
   Layers,
   ArrowRight,
-  User,
   ArrowRightLeft,
   CheckCircle2,
   AlertCircle,
@@ -50,6 +49,7 @@ import { TransferBatchModal } from '../components/TransferBatchModal';
 import { MarkAttendanceModal } from '../components/MarkAttendanceModal';
 import { RecordPaymentModal } from '../components/RecordPaymentModal';
 import { ReceiptModal } from '../components/ReceiptModal';
+import { StudentAvatar } from '../components/StudentAvatar';
 import { formatTimeAmPm } from '../utils/attendanceUtils';
 import {
   formatIndianCurrency,
@@ -638,17 +638,11 @@ export const DashboardPage: React.FC = () => {
                   className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-[#1a2540] transition-colors rounded-lg px-2"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] overflow-hidden flex items-center justify-center shrink-0">
-                      {fee.student?.photo_url ? (
-                        <img
-                          src={fee.student.photo_url}
-                          alt={fee.student.full_name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <User className="w-4 h-4 text-slate-400" />
-                      )}
-                    </div>
+                    <StudentAvatar
+                      photoUrl={fee.student?.photo_url}
+                      name={fee.student?.full_name}
+                      className="w-9 h-9"
+                    />
                     <div>
                       <Link
                         to={`/students/${fee.student_id}`}
@@ -739,17 +733,11 @@ export const DashboardPage: React.FC = () => {
                       className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-[#1a2540] transition-colors rounded-lg px-2"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] overflow-hidden flex items-center justify-center shrink-0">
-                          {item.photo_url ? (
-                            <img
-                              src={item.photo_url}
-                              alt={item.student_name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <User className="w-4 h-4 text-slate-400" />
-                          )}
-                        </div>
+                        <StudentAvatar
+                          photoUrl={item.photo_url}
+                          name={item.student_name}
+                          className="w-9 h-9"
+                        />
                         <div>
                           <Link
                             to={`/students/${item.student_id}`}
@@ -826,17 +814,11 @@ export const DashboardPage: React.FC = () => {
                       className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-[#1a2540] transition-colors rounded-lg px-2"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] overflow-hidden flex items-center justify-center shrink-0">
-                          {s.photo_url ? (
-                            <img
-                              src={s.photo_url}
-                              alt={s.full_name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <User className="w-4 h-4 text-slate-400" />
-                          )}
-                        </div>
+                        <StudentAvatar
+                          photoUrl={s.photo_url}
+                          name={s.full_name}
+                          className="w-9 h-9"
+                        />
                         <div>
                           <Link
                             to={`/students/${s.id}`}
@@ -1012,17 +994,11 @@ export const DashboardPage: React.FC = () => {
                   className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-[#1a2540] transition-colors rounded-lg px-2"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-[#1a2540] border border-slate-200 dark:border-[#26324a] overflow-hidden flex items-center justify-center shrink-0">
-                      {s.photo_url ? (
-                        <img
-                          src={s.photo_url}
-                          alt={s.full_name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <User className="w-4 h-4 text-slate-400" />
-                      )}
-                    </div>
+                    <StudentAvatar
+                      photoUrl={s.photo_url}
+                      name={s.full_name}
+                      className="w-9 h-9"
+                    />
                     <div>
                       <Link
                         to={`/students/${s.id}`}

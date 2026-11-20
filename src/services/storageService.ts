@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { buildStudentPhotoPath, extractStoragePath } from '../utils/studentPhotoUtils';
 
 const BUCKET_NAME = 'student-photos';
 const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -58,10 +59,7 @@ export async function uploadStudentPhoto(file: File): Promise<{ url: string | nu
       return { url: null, error: 'Unauthorized: You must be logged in to upload student photos.' };
     }
 
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${crypto.randomUUID()}-${Date.now()}.${fileExt}`;
-    // Multi-tenant storage path isolation: {auth.uid()}/students/...
-    const filePath = `${user.id}/students/${fileName}`;
+    const filePath = buildStudentPhotoPath(user.id, file.name);
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
@@ -80,11 +78,7 @@ export async function uploadStudentPhoto(file: File): Promise<{ url: string | nu
       };
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(filePath);
-
-    return { url: publicUrlData.publicUrl, error: null };
+    return { url: filePath, error: null };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unexpected photo upload error';
     return { url: null, error: msg };
@@ -95,15 +89,14 @@ export async function uploadStudentPhoto(file: File): Promise<{ url: string | nu
  * Deletes a student photo from the bucket if it exists.
  */
 export async function deleteStudentPhoto(photoUrl: string): Promise<{ error: string | null }> {
-  if (!photoUrl || !photoUrl.includes(BUCKET_NAME)) {
+  if (!photoUrl) {
     return { error: null };
   }
 
   try {
-    const parts = photoUrl.split(`${BUCKET_NAME}/`);
-    if (parts.length < 2) return { error: null };
+    const filePath = extractStoragePath(photoUrl, BUCKET_NAME);
+    if (!filePath) return { error: null };
 
-    const filePath = parts[1].split('?')[0]; // strip query params
     const { error } = await supabase.storage.from(BUCKET_NAME).remove([filePath]);
 
     if (error && import.meta.env.DEV) {

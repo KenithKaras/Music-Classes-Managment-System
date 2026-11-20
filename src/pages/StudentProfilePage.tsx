@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
-  User,
   Phone,
   Mail,
   MapPin,
@@ -38,6 +37,7 @@ import { Button } from '../components/Button';
 import { Badge } from '../components/Badge';
 import { StudentFormModal } from '../components/StudentFormModal';
 import { TransferBatchModal } from '../components/TransferBatchModal';
+import { StudentAvatar } from '../components/StudentAvatar';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { RecordPaymentModal } from '../components/RecordPaymentModal';
 import { ReceiptModal } from '../components/ReceiptModal';
@@ -230,17 +230,12 @@ export const StudentProfilePage: React.FC = () => {
       {/* Main Profile Header Card */}
       <div className="bg-white dark:bg-[#131c2e] rounded-xl border border-slate-200 dark:border-[#26324a] p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-          <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-            {student.photo_url ? (
-              <img
-                src={student.photo_url}
-                alt={student.full_name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <User className="w-12 h-12 text-slate-400" />
-            )}
-          </div>
+          <StudentAvatar
+            photoUrl={student.photo_url}
+            name={student.full_name}
+            className="w-24 h-24"
+            textClassName="text-2xl font-bold uppercase"
+          />
 
           <div className="space-y-1.5 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">

@@ -37,6 +37,7 @@ import { RecordPaymentModal } from '../components/RecordPaymentModal';
 import { ReceiptModal } from '../components/ReceiptModal';
 import { WhatsAppReminderModal } from '../components/WhatsAppReminderModal';
 import { PaymentRequestModal } from '../components/PaymentRequestModal';
+import { StudentAvatar } from '../components/StudentAvatar';
 import { useTheme } from '../hooks/useTheme';
 import type {
   MonthlyFee,
@@ -773,17 +774,12 @@ export const FeesPage: React.FC = () => {
                       <tr key={fee.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            {fee.student?.photo_url ? (
-                              <img
-                                src={fee.student.photo_url}
-                                alt={fee.student.full_name}
-                                className="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-slate-700"
-                              />
-                            ) : (
-                              <div className="w-9 h-9 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-200 dark:border-indigo-900/50">
-                                {fee.student?.full_name?.substring(0, 2).toUpperCase() || 'ST'}
-                              </div>
-                            )}
+                            <StudentAvatar
+                              photoUrl={fee.student?.photo_url}
+                              name={fee.student?.full_name}
+                              className="w-9 h-9"
+                              textClassName="text-xs font-bold uppercase"
+                            />
                             <div>
                               <p className="font-semibold text-slate-900 dark:text-slate-100">
                                 {fee.student?.full_name}
@@ -916,17 +912,12 @@ export const FeesPage: React.FC = () => {
                   <div key={fee.id} className="p-4 space-y-3 bg-white dark:bg-[#131c2e]">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5">
-                        {fee.student?.photo_url ? (
-                          <img
-                            src={fee.student.photo_url}
-                            alt={fee.student.full_name}
-                            className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-200 dark:border-indigo-900/50">
-                            {fee.student?.full_name?.substring(0, 2).toUpperCase() || 'ST'}
-                          </div>
-                        )}
+                        <StudentAvatar
+                          photoUrl={fee.student?.photo_url}
+                          name={fee.student?.full_name}
+                          className="w-10 h-10"
+                          textClassName="text-xs font-bold uppercase"
+                        />
                         <div>
                           <p className="font-semibold text-slate-900 dark:text-slate-100">{fee.student?.full_name}</p>
                           <p className="text-xs text-slate-500 dark:text-slate-400">

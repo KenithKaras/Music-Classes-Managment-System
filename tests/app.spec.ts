@@ -268,7 +268,22 @@ async function setupMockSessionAndRoutes(
   });
 
   await page.route('**/storage/v1/object/**', async (route) => {
-    const method = route.request().method();
+    const req = route.request();
+    const method = req.method();
+    const url = req.url();
+
+    if (method === 'POST' && url.includes('/sign/')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          signedURL: '/object/sign/mock-signed-avatar.png',
+          signedUrl: '/object/sign/mock-signed-avatar.png',
+        }),
+      });
+      return;
+    }
+
     if (method === 'POST' || method === 'PUT') {
       await route.fulfill({
         status: 200,
@@ -285,6 +300,14 @@ async function setupMockSessionAndRoutes(
       });
       return;
     }
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
+    });
+  });
+
+  await page.route('https://example.com/**', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'image/png',
@@ -2536,6 +2559,340 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
           await confirmMarkAllBtn.click();
           await expect(page.locator('text=Saved').first()).toBeVisible();
         }
+      }
+    }
+  });
+
+  // ----------------------------------------------------------------------------
+  // 28. STUDENT PHOTO COPY ON APPROVAL, DISPLAY EVERYWHERE & BACKFILL
+  // ----------------------------------------------------------------------------
+  test('28. Photo handling: approve copies photo, displays photo on list & profile, initials fallback, backfill button lifecycle, and failed copy handling (320px, 375px, desktop; light & dark)', async ({ page }, testInfo) => {
+    const isDesktop = testInfo.project.name.includes('Desktop');
+    const is320 = testInfo.project.name.includes('320');
+    const viewports = isDesktop
+      ? [{ width: 1280, height: 800, name: 'desktop' }]
+      : is320
+      ? [{ width: 320, height: 568, name: '320px' }]
+      : [{ width: 375, height: 667, name: '375px' }];
+
+    for (const theme of ['light', 'dark'] as const) {
+      for (const vp of viewports) {
+        await page.setViewportSize({ width: vp.width, height: vp.height });
+
+        // Mutable state store for students and submissions
+        const studentsList = [
+          {
+            id: 'student-1',
+            owner_id: MOCK_USER_ID,
+            full_name: 'Aarav Patel',
+            phone: '9876543211',
+            email: 'aarav@example.com',
+            status: 'active' as const,
+            batch_id: 'batch-1',
+            monthly_fee: 3000,
+            enrollment_date: '2026-01-10',
+            photo_url: null, // NO photo -> initials avatar "AP"
+            guardian_name: 'Mr. Patel',
+            guardian_phone: '9876543299',
+            address: 'Bandra, Mumbai',
+            created_at: '2026-01-10T00:00:00Z',
+            updated_at: '2026-01-10T00:00:00Z',
+            batch: { id: 'batch-1', name: 'Guitar Foundations' },
+          },
+          {
+            id: 'student-2',
+            owner_id: MOCK_USER_ID,
+            full_name: 'Diya Sharma',
+            phone: '9876543212',
+            email: 'diya@example.com',
+            status: 'active' as const,
+            batch_id: 'batch-2',
+            monthly_fee: 3500,
+            enrollment_date: '2026-01-15',
+            photo_url: '11111111-1111-1111-1111-111111111111/students/existing-diya.png', // HAS photo
+            guardian_name: 'Mrs. Sharma',
+            guardian_phone: '9876543288',
+            address: 'Andheri, Mumbai',
+            created_at: '2026-01-15T00:00:00Z',
+            updated_at: '2026-01-15T00:00:00Z',
+            batch: { id: 'batch-2', name: 'Advanced Keyboard' },
+          },
+          {
+            id: 'student-3',
+            owner_id: MOCK_USER_ID,
+            full_name: 'Rohan Verma',
+            phone: '9876543213',
+            email: 'rohan@example.com',
+            status: 'active' as const,
+            batch_id: 'batch-1',
+            monthly_fee: 3000,
+            enrollment_date: '2026-01-20',
+            photo_url: null, // Unpatched: has approved submission with photo_path
+            guardian_name: 'Sunita Verma',
+            guardian_phone: '9876543277',
+            address: 'Juhu, Mumbai',
+            created_at: '2026-01-20T00:00:00Z',
+            updated_at: '2026-01-20T00:00:00Z',
+            batch: { id: 'batch-1', name: 'Guitar Foundations' },
+          },
+        ];
+
+        const submissionsList = [
+          {
+            id: 'sub-pending-1',
+            owner_id: MOCK_USER_ID,
+            enrollment_link_id: 'link-1',
+            child_name: 'Kabir Khan',
+            parent_name: 'Shahid Khan',
+            parent_phone: '9876543250',
+            parent_email: 'shahid@example.com',
+            address: '789 Bandra West',
+            preferred_batch: 'Guitar Foundations',
+            photo_path: 'enrollment-photos/11111111-1111-1111-1111-111111111111/kabir.jpg',
+            consent_at: '2026-01-25T00:00:00Z',
+            status: 'pending' as const,
+            student_id: null,
+            reviewed_at: null,
+            created_at: '2026-01-25T00:00:00Z',
+          },
+          {
+            id: 'sub-approved-1',
+            owner_id: MOCK_USER_ID,
+            enrollment_link_id: 'link-2',
+            child_name: 'Rohan Verma',
+            parent_name: 'Sunita Verma',
+            parent_phone: '9876543213',
+            parent_email: 'rohan@example.com',
+            address: 'Juhu, Mumbai',
+            preferred_batch: 'Guitar Foundations',
+            photo_path: 'enrollment-photos/11111111-1111-1111-1111-111111111111/rohan.jpg',
+            consent_at: '2026-01-20T00:00:00Z',
+            status: 'approved' as const,
+            student_id: 'student-3',
+            reviewed_at: '2026-01-20T00:00:00Z',
+            created_at: '2026-01-20T00:00:00Z',
+          },
+        ];
+
+        let simulateStorageFailure = false;
+
+        await setupMockSessionAndRoutes(page, theme);
+
+        // Specific mock for students and enrollment_submissions
+        await page.route('**/rest/v1/students**', async (route) => {
+          const method = route.request().method();
+          const url = route.request().url();
+          const isSingle = route.request().headers()['accept']?.includes('vnd.pgrst.object+json');
+
+          if (method === 'GET') {
+            if (url.includes('id=eq.')) {
+              const studentId = url.split('id=eq.')[1]?.split('&')[0];
+              const st = studentsList.find((s) => s.id === studentId) || studentsList[0];
+              await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify(isSingle ? st : [st]),
+              });
+              return;
+            }
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              headers: { 'content-range': `0-${studentsList.length - 1}/${studentsList.length}` },
+              body: JSON.stringify(studentsList),
+            });
+            return;
+          }
+
+          if (method === 'POST') {
+            const rawBody = route.request().postDataJSON() || {};
+            const body = Array.isArray(rawBody) ? rawBody[0] : rawBody;
+            const newStudent = {
+              id: 'student-' + Date.now(),
+              owner_id: MOCK_USER_ID,
+              full_name: body.full_name || 'New Student',
+              phone: body.phone || null,
+              email: body.email || null,
+              photo_url: body.photo_url || null,
+              guardian_name: body.guardian_name || null,
+              guardian_phone: body.guardian_phone || null,
+              address: body.address || null,
+              enrollment_date: body.enrollment_date || '2026-01-25',
+              batch_id: body.batch_id || null,
+              status: body.status || 'active',
+              monthly_fee: body.monthly_fee || 3000,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              batch: MOCK_BATCHES[0],
+            };
+            studentsList.push(newStudent);
+            await route.fulfill({
+              status: 201,
+              contentType: 'application/json',
+              body: JSON.stringify(isSingle ? newStudent : [newStudent]),
+            });
+            return;
+          }
+
+          if (method === 'PATCH') {
+            const body = route.request().postDataJSON() || {};
+            if (url.includes('id=eq.')) {
+              const studentId = url.split('id=eq.')[1]?.split('&')[0];
+              const st = studentsList.find((s) => s.id === studentId);
+              if (st) {
+                Object.assign(st, body);
+              }
+            }
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify(studentsList),
+            });
+            return;
+          }
+
+          await route.continue();
+        });
+
+        await page.route('**/rest/v1/enrollment_submissions**', async (route) => {
+          const method = route.request().method();
+          const url = route.request().url();
+
+          if (method === 'GET') {
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify(submissionsList),
+            });
+            return;
+          }
+
+          if (method === 'PATCH') {
+            const body = route.request().postDataJSON() || {};
+            if (url.includes('id=eq.')) {
+              const subId = url.split('id=eq.')[1]?.split('&')[0];
+              const sub = submissionsList.find((s) => s.id === subId);
+              if (sub) {
+                Object.assign(sub, body);
+              }
+            }
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify(submissionsList),
+            });
+            return;
+          }
+
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+        });
+
+        // Intercept storage download to test failure
+        await page.route('**/storage/v1/object/authenticated/enrollment-photos/**', async (route) => {
+          if (simulateStorageFailure) {
+            await route.fulfill({
+              status: 500,
+              contentType: 'application/json',
+              body: JSON.stringify({ error: 'Storage download failed' }),
+            });
+            return;
+          }
+          await route.fulfill({
+            status: 200,
+            contentType: 'image/png',
+            body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
+          });
+        });
+
+        await page.route('**/storage/v1/object/enrollment-photos/**', async (route) => {
+          if (simulateStorageFailure) {
+            await route.fulfill({
+              status: 500,
+              contentType: 'application/json',
+              body: JSON.stringify({ error: 'Storage download failed' }),
+            });
+            return;
+          }
+          await route.fulfill({
+            status: 200,
+            contentType: 'image/png',
+            body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
+          });
+        });
+
+        // 1. Visit /students
+        await page.goto('/students');
+        await expect(page.locator('h1', { hasText: 'Students & Batches' })).toBeVisible();
+
+        // 2. Initials avatar fallback for student with no photo
+        // Aarav Patel has photo_url: null, so should show initials avatar "AP"
+        const aaravAvatar = page.locator('div[aria-label="Aarav Patel"]').filter({ visible: true }).first();
+        await expect(aaravAvatar).toBeVisible();
+        await expect(aaravAvatar).toHaveText(/A[AP]/);
+
+        // Diya Sharma has photo_url, so signed URL renders img
+        const diyaRow = page.locator('tr, div.rounded-2xl', { hasText: 'Diya Sharma' }).filter({ visible: true }).first();
+        await expect(diyaRow.locator('img[alt="Diya Sharma"]').first()).toBeVisible();
+
+        // 3. Backfill button is visible because student-3 (Rohan Verma) has no photo_url but sub-approved-1 has photo_path
+        const backfillBtn = page.getByRole('button', { name: 'Copy registration photos' }).first();
+        await expect(backfillBtn).toBeVisible();
+
+        // 4. Test failed copy on Approve:
+        simulateStorageFailure = true;
+
+        const pendingCard = page.locator('div.rounded-xl', { hasText: 'Kabir Khan' }).first();
+        await expect(pendingCard).toBeVisible();
+        const approveBtn = pendingCard.getByRole('button', { name: 'Approve' });
+        await approveBtn.click();
+
+        // Error banner / alert appears
+        const copyErrorBanner = page.locator('text=Could not copy the photo. Try again.').first();
+        await expect(copyErrorBanner).toBeVisible();
+        // Submission stays pending
+        await expect(pendingCard).toBeVisible();
+
+        // Unset failure
+        simulateStorageFailure = false;
+
+        // 5. Successful approval copies the photo
+        await approveBtn.click();
+
+        // Modal opens with prefilled photo and details
+        const modal = page.locator('[role="dialog"]');
+        await expect(modal).toBeVisible();
+        await expect(modal.locator('input[name="fullName"], input#fullName').first()).toHaveValue('Kabir Khan');
+
+        // Submit modal to create student
+        const saveBtn = modal.getByRole('button', { name: /Create Student|Save Changes/i });
+        await saveBtn.click();
+        await expect(modal).not.toBeVisible();
+
+        // Student created with photo_url and displayed on list
+        const kabirRow = page.locator('tr, div.rounded-2xl', { hasText: 'Kabir Khan' }).filter({ visible: true }).first();
+        await expect(kabirRow).toBeVisible();
+        await expect(kabirRow.locator('img[alt="Kabir Khan"]').first()).toBeVisible();
+
+        // 6. Test Backfill button execution
+        await backfillBtn.click();
+
+        // Banner appears: "Copied 1 photos. 0 failed."
+        const resultBanner = page.locator('text=/Copied 1 photos\\. 0 failed\\./i').first();
+        await expect(resultBanner).toBeVisible();
+
+        // Rohan Verma now has photo patched
+        const rohan = studentsList.find((s) => s.id === 'student-3');
+        expect(rohan?.photo_url).toBeTruthy();
+
+        // Backfill button disappears because no unpatched students remain
+        await expect(page.getByRole('button', { name: 'Copy registration photos' })).toHaveCount(0);
+
+        // 7. Verify photo displays on Student Profile page
+        const kabirStudent = studentsList.find((s) => s.full_name === 'Kabir Khan');
+        await page.goto(`/students/${kabirStudent?.id}`);
+        await expect(page.locator('h1', { hasText: 'Kabir Khan' })).toBeVisible();
+        const profileAvatar = page.locator('img[alt="Kabir Khan"]').first();
+        await expect(profileAvatar).toBeVisible();
       }
     }
   });

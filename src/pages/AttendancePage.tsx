@@ -4,7 +4,6 @@ import {
   Calendar,
   FileText,
   AlertTriangle,
-  User,
   Phone,
   CheckCircle2,
   ChevronLeft,
@@ -40,6 +39,7 @@ import { Badge } from '../components/Badge';
 import { Tabs } from '../components/Tabs';
 import { Table } from '../components/Table';
 import { EmptyState } from '../components/EmptyState';
+import { StudentAvatar } from '../components/StudentAvatar';
 import {
   formatDateYmd,
   getAttendanceStatusBadge,
@@ -729,17 +729,11 @@ export const AttendancePage: React.FC = () => {
                                   >
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                       <div className="flex items-center gap-3 min-w-0">
-                                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-                                          {st.photo_url ? (
-                                            <img
-                                              src={st.photo_url}
-                                              alt={st.full_name}
-                                              className="w-full h-full object-cover"
-                                            />
-                                          ) : (
-                                            <User className="w-5 h-5 text-slate-400" />
-                                          )}
-                                        </div>
+                                        <StudentAvatar
+                                          photoUrl={st.photo_url}
+                                          name={st.full_name}
+                                          className="w-10 h-10"
+                                        />
                                         <div className="min-w-0">
                                           <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate">
                                             {st.full_name}
@@ -1037,13 +1031,12 @@ export const AttendancePage: React.FC = () => {
                     <tr key={r.student_id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-                            {r.photo_url ? (
-                              <img src={r.photo_url} alt={r.student_name} className="w-full h-full object-cover" />
-                            ) : (
-                              <User className="w-4 h-4 text-slate-400" />
-                            )}
-                          </div>
+                          <StudentAvatar
+                            photoUrl={r.photo_url}
+                            name={r.student_name}
+                            className="w-8 h-8"
+                            textClassName="text-[10px] font-bold uppercase"
+                          />
                           <span className="font-bold text-slate-900 dark:text-slate-100">
                             {r.student_name}
                           </span>

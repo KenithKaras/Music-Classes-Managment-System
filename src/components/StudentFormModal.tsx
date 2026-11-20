@@ -4,10 +4,11 @@ import { Input } from './Input';
 import { Select } from './Select';
 import { Button } from './Button';
 import { validateStudentPhoto, uploadStudentPhoto } from '../services/storageService';
+import { StudentAvatar } from './StudentAvatar';
 import { getAcademySettings } from '../services/academyService';
 import { getBatches } from '../services/batchService';
 import type { Student, StudentFormData, Batch } from '../types';
-import { Upload, X, User } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { normalizeIndianPhone, PHONE_INPUT_HINT } from '../utils/formUtils';
 
 interface StudentFormModalProps {
@@ -231,16 +232,13 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
             Student Photo (Optional)
           </label>
           <div className="flex items-center gap-4">
-            <div className="relative w-18 h-18 rounded-full bg-slate-100 border-2 border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
-              {photoPreview ? (
-                <img
-                  src={photoPreview}
-                  alt="Student preview"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-8 h-8 text-slate-400" />
-              )}
+            <div className="relative w-18 h-18 rounded-full border-2 border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+              <StudentAvatar
+                photoUrl={photoPreview || photoUrl}
+                name={fullName}
+                className="w-full h-full"
+                textClassName="text-xl font-bold"
+              />
               {isUploadingPhoto && (
                 <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center">
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

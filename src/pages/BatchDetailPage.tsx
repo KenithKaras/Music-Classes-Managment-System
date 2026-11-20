@@ -8,7 +8,6 @@ import {
   Edit2,
   Trash2,
   ArrowRightLeft,
-  User,
   Plus,
 } from 'lucide-react';
 import { getBatchById, updateBatch, deleteBatch } from '../services/batchService';
@@ -22,6 +21,7 @@ import { EmptyState } from '../components/EmptyState';
 import { BatchFormModal } from '../components/BatchFormModal';
 import { TransferBatchModal } from '../components/TransferBatchModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { StudentAvatar } from '../components/StudentAvatar';
 
 export const BatchDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -243,17 +243,11 @@ export const BatchDetailPage: React.FC = () => {
                     <tr key={student.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-                            {student.photo_url ? (
-                              <img
-                                src={student.photo_url}
-                                alt={student.full_name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <User className="w-5 h-5 text-slate-400" />
-                            )}
-                          </div>
+                          <StudentAvatar
+                            photoUrl={student.photo_url}
+                            name={student.full_name}
+                            className="w-10 h-10"
+                          />
                           <div>
                             <Link
                               to={`/students/${student.id}`}
@@ -321,17 +315,11 @@ export const BatchDetailPage: React.FC = () => {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-                        {student.photo_url ? (
-                          <img
-                            src={student.photo_url}
-                            alt={student.full_name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <User className="w-5 h-5 text-slate-400" />
-                        )}
-                      </div>
+                      <StudentAvatar
+                        photoUrl={student.photo_url}
+                        name={student.full_name}
+                        className="w-10 h-10"
+                      />
                       <div>
                         <Link
                           to={`/students/${student.id}`}
