@@ -32,6 +32,7 @@ import { Select } from '../components/Select';
 import { Badge } from '../components/Badge';
 import { Tabs } from '../components/Tabs';
 import { EmptyState } from '../components/EmptyState';
+import { Modal } from '../components/Modal';
 import { RecordPaymentModal } from '../components/RecordPaymentModal';
 import { ReceiptModal } from '../components/ReceiptModal';
 import { WhatsAppReminderModal } from '../components/WhatsAppReminderModal';
@@ -45,7 +46,9 @@ import type {
   Batch,
   MonthlyFinancialSummary,
   MonthlyIncomeDataPoint,
+  PaymentScreenshot,
 } from '../types';
+import { supabase } from '../lib/supabase';
 import {
   formatIndianCurrency,
   formatBillingMonth,
@@ -108,6 +111,108 @@ export const FeesPage: React.FC = () => {
   const [reminderFee, setReminderFee] = useState<MonthlyFee | null>(null);
   const [paymentRequestFee, setPaymentRequestFee] = useState<MonthlyFee | null>(null);
 
+  // Screenshots state (Feature A)
+  const [pendingScreenshots, setPendingScreenshots] = useState<PaymentScreenshot[]>([]);
+  const [viewingScreenshotUrl, setViewingScreenshotUrl] = useState<string | null>(null);
+  const [loadingScreenshotId, setLoadingScreenshotId] = useState<string | null>(null);
+
+  const fetchPendingScreenshots = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_screenshots')
+        .select(`
+          id,
+          owner_id,
+          payment_link_id,
+          storage_path,
+          mime_type,
+          size_bytes,
+          status,
+          reviewed_at,
+          created_at,
+          payment_link:payment_links (
+            id,
+            monthly_fee_id,
+            monthly_fee:monthly_fees (
+              id,
+              billing_month,
+              amount_due,
+              student:students (
+                id,
+                full_name,
+                phone
+              )
+            )
+          )
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setPendingScreenshots(data as unknown as PaymentScreenshot[]);
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.warn('Could not load payment screenshots:', err);
+      }
+    }
+  }, []);
+
+  const handleViewScreenshot = async (storagePath: string, id: string) => {
+    setLoadingScreenshotId(id);
+    try {
+      const { data, error } = await supabase.storage
+        .from('payment-screenshots')
+        .createSignedUrl(storagePath, 60);
+      if (data?.signedUrl) {
+        setViewingScreenshotUrl(data.signedUrl);
+      } else if (error) {
+        alert('Could not generate secure view link: ' + error.message);
+      }
+    } catch {
+      alert('Failed to view screenshot.');
+    } finally {
+      setLoadingScreenshotId(null);
+    }
+  };
+
+  const handleMarkScreenshotReviewed = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('payment_screenshots')
+        .update({ status: 'reviewed', reviewed_at: new Date().toISOString() })
+        .eq('id', id);
+      if (!error) {
+        await fetchPendingScreenshots();
+      } else {
+        alert('Failed to mark reviewed: ' + error.message);
+      }
+    } catch {
+      alert('Failed to mark reviewed.');
+    }
+  };
+
+  const handleDeleteScreenshot = async (screenshot: PaymentScreenshot) => {
+    if (!confirm('Are you sure you want to delete this screenshot?')) return;
+    try {
+      await supabase.storage.from('payment-screenshots').remove([screenshot.storage_path]);
+      await supabase.from('payment_screenshots').delete().eq('id', screenshot.id);
+      await fetchPendingScreenshots();
+    } catch {
+      alert('Failed to delete screenshot.');
+    }
+  };
+
+  const feeIdsWithScreenshot = React.useMemo(() => {
+    const set = new Set<string>();
+    pendingScreenshots.forEach((s) => {
+      if (s.payment_link?.monthly_fee_id) {
+        set.add(s.payment_link.monthly_fee_id);
+      }
+    });
+    return set;
+  }, [pendingScreenshots]);
+
   // Load batches on mount
   useEffect(() => {
     getBatches().then(({ batches: list }) => {
@@ -130,6 +235,7 @@ export const FeesPage: React.FC = () => {
 
       if (feesRes.fees) setMonthlyFees(feesRes.fees);
       if (summaryRes.summary) setFinancialSummary(summaryRes.summary);
+      await fetchPendingScreenshots();
     } finally {
       setLoadingFees(false);
     }
@@ -456,6 +562,88 @@ export const FeesPage: React.FC = () => {
             </div>
           )}
 
+          {/* Screenshot Received Section (Feature A) */}
+          {pendingScreenshots.length > 0 && (
+            <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-4 sm:p-5 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" />
+                  <h3 className="text-sm sm:text-base font-semibold text-amber-900 dark:text-amber-200">
+                    Payment Screenshots Received ({pendingScreenshots.length})
+                  </h3>
+                </div>
+                <span className="text-xs text-amber-700 dark:text-amber-400">
+                  Review and confirm payments
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {pendingScreenshots.map((screenshot) => {
+                  const studentName =
+                    screenshot.payment_link?.monthly_fee?.student?.full_name || 'Student';
+                  const billingMonth = screenshot.payment_link?.monthly_fee?.billing_month
+                    ? formatBillingMonth(screenshot.payment_link.monthly_fee.billing_month)
+                    : 'Current Month';
+                  const receivedTime = new Date(screenshot.created_at).toLocaleString('en-IN', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  });
+                  return (
+                    <div
+                      key={screenshot.id}
+                      className="bg-white dark:bg-[#131c2e] p-3.5 rounded-xl border border-amber-200 dark:border-amber-900/50 flex flex-col justify-between gap-3 shadow-2xs"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                              {studentName}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              Billing: {billingMonth}
+                            </p>
+                          </div>
+                          <span className="text-[10px] bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-semibold px-2 py-0.5 rounded-full">
+                            Pending
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                          Received: {receivedTime}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 text-xs"
+                          onClick={() => handleViewScreenshot(screenshot.storage_path, screenshot.id)}
+                          loading={loadingScreenshotId === screenshot.id}
+                        >
+                          View Screenshot
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="text-xs text-emerald-700 hover:text-emerald-800"
+                          onClick={() => handleMarkScreenshotReviewed(screenshot.id)}
+                        >
+                          Mark Reviewed
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="text-xs text-rose-600 hover:text-rose-700"
+                          onClick={() => handleDeleteScreenshot(screenshot)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Filters Bar */}
           <div className="bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] rounded-2xl p-4 shadow-xs flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full lg:w-auto flex-1">
@@ -584,12 +772,19 @@ export const FeesPage: React.FC = () => {
                         </td>
 
                         <td className="px-6 py-4">
-                          {renderStatusBadge(
-                            fee.status,
-                            fee.amount_paid,
-                            fee.amount_due,
-                            fee.days_overdue
-                          )}
+                          <div className="flex flex-col gap-1 items-start">
+                            {renderStatusBadge(
+                              fee.status,
+                              fee.amount_paid,
+                              fee.amount_due,
+                              fee.days_overdue
+                            )}
+                            {feeIdsWithScreenshot.has(fee.id) && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                                Screenshot Attached
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400">
@@ -679,12 +874,17 @@ export const FeesPage: React.FC = () => {
                           </p>
                         </div>
                       </div>
-                      <div>
+                      <div className="flex flex-col items-end gap-1">
                         {renderStatusBadge(
                           fee.status,
                           fee.amount_paid,
                           fee.amount_due,
                           fee.days_overdue
+                        )}
+                        {feeIdsWithScreenshot.has(fee.id) && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                            Screenshot Attached
+                          </span>
                         )}
                       </div>
                     </div>
@@ -1265,6 +1465,37 @@ export const FeesPage: React.FC = () => {
         onClose={() => setPaymentRequestFee(null)}
         fee={paymentRequestFee}
       />
+
+      {/* 5. Screenshot Preview Modal (Feature A) */}
+      {viewingScreenshotUrl && (
+        <Modal
+          isOpen={!!viewingScreenshotUrl}
+          onClose={() => setViewingScreenshotUrl(null)}
+          title="Payment Screenshot"
+          description="60-second secure temporary preview from private storage"
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <div className="max-h-[70vh] overflow-auto flex items-center justify-center bg-slate-950 rounded-xl p-2">
+              <img
+                src={viewingScreenshotUrl}
+                alt="Payment Screenshot Preview"
+                className="max-h-[65vh] object-contain rounded-lg"
+              />
+            </div>
+            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
+              <span>This URL expires automatically in 60 seconds.</span>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setViewingScreenshotUrl(null)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

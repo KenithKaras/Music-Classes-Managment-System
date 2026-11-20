@@ -386,3 +386,63 @@ export interface MonthlyIncomeExportRow {
   'Collection Rate (%)': number;
 }
 
+// ==============================================================================
+// Payment Screenshots & Enrollment Types
+// ==============================================================================
+
+export interface PaymentScreenshot {
+  id: string;
+  owner_id: string;
+  payment_link_id: string;
+  storage_path: string;
+  mime_type: string;
+  size_bytes: number;
+  status: 'pending' | 'reviewed' | 'deleted';
+  reviewed_at: string | null;
+  created_at: string;
+  payment_link?: {
+    id: string;
+    monthly_fee_id: string;
+    monthly_fee?: {
+      id: string;
+      student_id: string;
+      billing_month: string;
+      amount_due: number;
+      student?: {
+        id: string;
+        full_name: string;
+        phone: string | null;
+      };
+    };
+  };
+}
+
+export interface EnrollmentLink {
+  id: string;
+  owner_id: string;
+  token_hash: string;
+  status: 'active' | 'revoked';
+  expires_at: string;
+  max_submissions: number;
+  submissions_count: number;
+  created_at: string;
+}
+
+export interface EnrollmentSubmission {
+  id: string;
+  owner_id: string;
+  enrollment_link_id: string;
+  child_name: string;
+  parent_name: string;
+  parent_phone: string;
+  parent_email: string | null;
+  address: string | null;
+  preferred_batch: string | null;
+  photo_path: string | null;
+  consent_at: string;
+  status: 'pending' | 'approved' | 'rejected';
+  student_id: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+

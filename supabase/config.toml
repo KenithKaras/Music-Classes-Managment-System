@@ -4,3 +4,15 @@ verify_jwt = true
 
 [functions.resolve-payment-link]
 verify_jwt = false
+
+[functions.upload-payment-screenshot]
+verify_jwt = false
+
+[functions.create-enrollment-link]
+verify_jwt = true
+
+[functions.submit-enrollment]
+verify_jwt = false
+
+[functions.upload-enrollment-photo]
+verify_jwt = false

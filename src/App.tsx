@@ -33,6 +33,7 @@ const SettingsPage = React.lazy(() => import('./pages/SettingsPage').then((m) =>
 const BackupsPage = React.lazy(() => import('./pages/BackupsPage').then((m) => ({ default: m.BackupsPage })));
 const ExportsPage = React.lazy(() => import('./pages/ExportsPage').then((m) => ({ default: m.ExportsPage })));
 const PayPage = React.lazy(() => import('./pages/PayPage').then((m) => ({ default: m.PayPage })));
+const EnrollPage = React.lazy(() => import('./pages/EnrollPage').then((m) => ({ default: m.EnrollPage })));
 
 const PageFallback: React.FC = () => (
   <div className="p-6 max-w-7xl mx-auto space-y-4">
@@ -72,17 +73,19 @@ const AuthAppLayout: React.FC = () => (
 );
 
 export const App: React.FC = () => {
-  const isPayPath = typeof window !== 'undefined' && window.location.pathname === '/pay';
+  const isPublicPath =
+    typeof window !== 'undefined' &&
+    (window.location.pathname === '/pay' || window.location.pathname.startsWith('/enroll/'));
 
-  // Missing environment variables screen on startup (bypassed on public /pay route)
-  if (!isPayPath && missingEnvVars.length > 0) {
+  // Missing environment variables screen on startup (bypassed on public /pay and /enroll routes)
+  if (!isPublicPath && missingEnvVars.length > 0) {
     return <SetupErrorScreen missingVars={missingEnvVars} />;
   }
 
   const [schemaResult, setSchemaResult] = useState<SchemaValidationResult | null>(null);
 
   const runSchemaCheck = async () => {
-    if (import.meta.env.DEV && !isPayPath) {
+    if (import.meta.env.DEV && !isPublicPath) {
       const res = await validateDatabaseSchema();
       if (!res.isValid) {
         setSchemaResult(res);
@@ -93,12 +96,12 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!isPayPath) {
+    if (!isPublicPath) {
       runSchemaCheck();
     }
-  }, [isPayPath]);
+  }, [isPublicPath]);
 
-  if (import.meta.env.DEV && !isPayPath && schemaResult && !schemaResult.isValid) {
+  if (import.meta.env.DEV && !isPublicPath && schemaResult && !schemaResult.isValid) {
     return <SchemaErrorScreen schemaResult={schemaResult} onRetry={runSchemaCheck} />;
   }
 
@@ -108,12 +111,22 @@ export const App: React.FC = () => {
         <BrowserRouter>
           <ThemeProvider>
             <Routes>
-              {/* Public Standalone /pay Route: completely outside AuthProvider, no Supabase, no storage */}
+              {/* Public Standalone /pay Route: completely outside AuthProvider, no Supabase auth, no storage */}
               <Route
                 path="/pay"
                 element={
                   <Suspense fallback={<PageFallback />}>
                     <PayPage />
+                  </Suspense>
+                }
+              />
+
+              {/* Public Standalone /enroll/:token Route: completely outside AuthProvider, no Supabase auth, no storage */}
+              <Route
+                path="/enroll/:token"
+                element={
+                  <Suspense fallback={<PageFallback />}>
+                    <EnrollPage />
                   </Suspense>
                 }
               />

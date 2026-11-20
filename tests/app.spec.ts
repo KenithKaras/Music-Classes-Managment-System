@@ -1516,4 +1516,368 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
 
     await payPage.close();
   });
+
+  // ----------------------------------------------------------------------------
+  // 18. FEATURE A: PAYMENT SCREENSHOT UPLOAD & OWNER REVIEW
+  // ----------------------------------------------------------------------------
+  test('18. Payment Screenshot Upload & Owner Review: /pay upload, file validation, owner notification on /fees', async ({ page }) => {
+    // A. Public /pay page: Screenshot upload
+    const payPage = await page.context().newPage();
+
+    await payPage.route('**/functions/v1/resolve-payment-link', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          payee_name: 'MIX with Me Classes',
+          upi_id: 'academy@okhdfcbank',
+          amount: '2500.00',
+          note: 'Music fees Nov 2026',
+        }),
+      });
+    });
+
+    let uploadedScreenshotPayload = false;
+    await payPage.route('**/functions/v1/upload-payment-screenshot', async (route) => {
+      uploadedScreenshotPayload = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          message: 'Screenshot uploaded successfully. The academy has been notified.',
+        }),
+      });
+    });
+
+    const payCspViolations: string[] = [];
+    payPage.on('console', (msg) => {
+      if (msg.text().includes('Content Security Policy')) {
+        payCspViolations.push(msg.text());
+      }
+    });
+
+    const payRestCalls: string[] = [];
+    payPage.on('request', (req) => {
+      if (req.url().includes('supabase.co/rest/v1/')) {
+        payRestCalls.push(req.url());
+      }
+    });
+
+    await payPage.goto('/pay?t=valid_mock_token_1234567890abcdefghijklmno');
+
+    await expect(payPage.locator('h1', { hasText: 'MIX with Me Classes' })).toBeVisible();
+    await expect(
+      payPage.locator('text=After you pay, upload a screenshot of the payment confirmation.')
+    ).toBeVisible();
+    await expect(
+      payPage.locator('text=Your screenshot is visible only to the academy and is deleted after the payment is recorded.')
+    ).toBeVisible();
+
+    // 1. Upload valid image buffer (PNG magic bytes)
+    const validPngBuffer = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+      0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+      0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+      0x89, 0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41,
+      0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+      0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00,
+      0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
+      0x42, 0x60, 0x82,
+    ]);
+
+    const fileInput = payPage.locator('input[type="file"]');
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: 'receipt.png',
+      mimeType: 'image/png',
+      buffer: validPngBuffer,
+    });
+
+    const uploadBtn = payPage.getByTestId('upload-screenshot-button');
+    await expect(uploadBtn).toBeVisible();
+    await uploadBtn.click();
+
+    // Verify success state
+    await expect(
+      payPage.locator('text=Thank you. The academy has received your screenshot.')
+    ).toBeVisible();
+    expect(uploadedScreenshotPayload).toBe(true);
+    expect(payRestCalls).toEqual([]);
+    expect(payCspViolations).toEqual([]);
+
+    await payPage.close();
+
+    // B. Authenticated Owner View: /fees page
+    await setupMockSessionAndRoutes(page, 'light');
+
+    // Mock pending screenshot
+    const mockPendingScreenshot = {
+      id: 'ss-111',
+      owner_id: MOCK_USER_ID,
+      payment_link_id: 'link-111',
+      storage_path: 'owner_id/ss-111.png',
+      mime_type: 'image/png',
+      size_bytes: 10240,
+      status: 'pending',
+      reviewed_at: null,
+      created_at: new Date().toISOString(),
+      payment_link: {
+        id: 'link-111',
+        monthly_fee_id: 'fee-1',
+        monthly_fee: {
+          id: 'fee-1',
+          student_id: 'student-1',
+          billing_month: '2026-11-01',
+          amount_due: 3000,
+          student: {
+            id: 'student-1',
+            full_name: 'Diya Sharma',
+            phone: '9876543210',
+          },
+        },
+      },
+    };
+
+    let screenshotsList = [mockPendingScreenshot];
+
+    await page.route('**/rest/v1/payment_screenshots**', async (route) => {
+      const method = route.request().method();
+      if (method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(screenshotsList),
+        });
+      } else if (method === 'PATCH' || method === 'POST') {
+        screenshotsList = [];
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([{ ...mockPendingScreenshot, status: 'reviewed' }]),
+        });
+      } else {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      }
+    });
+
+    await page.route('**/storage/v1/object/sign/payment-screenshots/**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ signedUrl: 'https://example.com/mock-screenshot.png' }),
+      });
+    });
+
+    await page.goto('/fees');
+    await expect(page.locator('h1', { hasText: 'Fees & Payments' })).toBeVisible();
+
+    // Verify "Payment Screenshots Received" section
+    await expect(page.locator('text=Payment Screenshots Received (1)')).toBeVisible();
+    await expect(page.locator('text=Diya Sharma').first()).toBeVisible();
+
+    // Verify "Screenshot Attached" badge on fee row
+    await expect(page.locator('text=Screenshot Attached').filter({ visible: true }).first()).toBeVisible();
+
+    // View screenshot preview modal
+    const viewScreenshotBtn = page.getByRole('button', { name: 'View Screenshot' }).filter({ visible: true }).first();
+    await expect(viewScreenshotBtn).toBeVisible();
+    await viewScreenshotBtn.click();
+
+    const previewModal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(previewModal).toBeVisible();
+    await expect(previewModal.locator('h3', { hasText: 'Payment Screenshot' })).toBeVisible();
+    await previewModal.getByRole('button', { name: 'Close', exact: true }).click();
+
+    // Mark reviewed
+    const markReviewedBtn = page.getByRole('button', { name: 'Mark Reviewed' }).filter({ visible: true }).first();
+    await expect(markReviewedBtn).toBeVisible();
+    await markReviewedBtn.click();
+  });
+
+  // ----------------------------------------------------------------------------
+  // 19. FEATURE B: STUDENT ENROLLMENT FORM & ADMIN APPROVAL
+  // ----------------------------------------------------------------------------
+  test('19. Student Enrollment Form & Admin Approval: /enroll/:token validation, parent submit, admin review and approval', async ({ page }) => {
+    // A. Public /enroll/:token page
+    const enrollPage = await page.context().newPage();
+
+    const enrollCspViolations: string[] = [];
+    enrollPage.on('console', (msg) => {
+      if (msg.text().includes('Content Security Policy')) {
+        enrollCspViolations.push(msg.text());
+      }
+    });
+
+    const enrollRestCalls: string[] = [];
+    enrollPage.on('request', (req) => {
+      if (req.url().includes('supabase.co/rest/v1/')) {
+        enrollRestCalls.push(req.url());
+      }
+    });
+
+    // 1. Invalid token shows invalid link screen
+    await enrollPage.goto('/enroll/short');
+    await expect(
+      enrollPage.locator('text=This registration link is no longer valid. Ask the academy for a new link.')
+    ).toBeVisible();
+    await expect(enrollPage.getByRole('button', { name: /Submit/i })).toHaveCount(0);
+
+    // 2. Valid token shows enrollment form
+    let submittedPayload: any = null;
+    await enrollPage.route('**/functions/v1/submit-enrollment', async (route) => {
+      submittedPayload = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          submission_id: 'sub-new-123',
+          message: 'Enrollment submitted successfully!',
+        }),
+      });
+    });
+
+    await enrollPage.goto('/enroll/valid_mock_token_32_bytes_abcdefghijklmnop');
+    await expect(enrollPage.locator('h1', { hasText: 'Music Academy Enrollment' })).toBeVisible();
+
+    const submitBtn = enrollPage.getByRole('button', { name: 'Submit Registration' });
+    await expect(submitBtn).toBeDisabled();
+
+    // Fill form
+    await enrollPage.getByTestId('child_name_input').fill('Rohan Verma');
+    await enrollPage.getByTestId('parent_name_input').fill('Sunita Verma');
+    await enrollPage.getByTestId('parent_phone_input').fill('9876543210');
+    await enrollPage.getByTestId('parent_email_input').fill('sunita@example.com');
+    await enrollPage.getByTestId('address_input').fill('Flat 402, Green Park');
+
+    // Consent required to enable submit
+    await expect(submitBtn).toBeDisabled();
+    await enrollPage.getByTestId('consent_checkbox').check();
+    await expect(submitBtn).toBeEnabled();
+
+    // Submit
+    await submitBtn.click();
+    await expect(enrollPage.locator('text=Registration Submitted')).toBeVisible();
+    await expect(
+      enrollPage.locator('text=Thank you. The academy will contact you after reviewing your details.')
+    ).toBeVisible();
+
+    expect(submittedPayload?.child_name).toBe('Rohan Verma');
+    expect(submittedPayload?.parent_name).toBe('Sunita Verma');
+    expect(submittedPayload?.parent_phone).toBe('9876543210');
+    expect(submittedPayload?.consent).toBe(true);
+
+    // Verify zero database calls from public page
+    expect(enrollRestCalls).toEqual([]);
+    expect(enrollCspViolations).toEqual([]);
+
+    await enrollPage.close();
+
+    // B. Authenticated Owner View: /students page
+    await setupMockSessionAndRoutes(page, 'light');
+
+    const mockPendingSubmission = {
+      id: 'sub-new-123',
+      owner_id: MOCK_USER_ID,
+      enrollment_link_id: 'link-enroll-1',
+      child_name: 'Rohan Verma',
+      parent_name: 'Sunita Verma',
+      parent_phone: '9876543210',
+      parent_email: 'sunita@example.com',
+      address: 'Flat 402, Green Park',
+      preferred_batch: 'Guitar Foundations',
+      photo_path: null,
+      consent_at: new Date().toISOString(),
+      status: 'pending',
+      student_id: null,
+      reviewed_at: null,
+      created_at: new Date().toISOString(),
+    };
+
+    let submissionsList = [mockPendingSubmission];
+
+    await page.route('**/rest/v1/enrollment_submissions**', async (route) => {
+      const method = route.request().method();
+      if (method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(submissionsList),
+        });
+      } else if (method === 'PATCH' || method === 'POST') {
+        submissionsList = [];
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([{ ...mockPendingSubmission, status: 'approved' }]),
+        });
+      } else {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      }
+    });
+
+    await page.route('**/rest/v1/enrollment_links**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+
+    await page.route('**/functions/v1/create-enrollment-link', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          url: 'http://localhost:5173/enroll/newly_generated_link_token',
+          expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+        }),
+      });
+    });
+
+    await page.goto('/students');
+    await expect(page.locator('h1', { hasText: 'Students & Batches' })).toBeVisible();
+
+    // 1. Send registration form button opens modal
+    const sendFormBtn = page.getByRole('button', { name: 'Send registration form' }).filter({ visible: true }).first();
+    await expect(sendFormBtn).toBeVisible();
+    await sendFormBtn.click();
+
+    const linkModal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(linkModal).toBeVisible();
+    await expect(linkModal.locator('h3', { hasText: 'Send Student Registration Form' })).toBeVisible();
+
+    // Click Generate Link
+    const genLinkBtn = linkModal.getByRole('button', { name: 'Generate Link' });
+    await expect(genLinkBtn).toBeVisible();
+    await genLinkBtn.click();
+
+    await expect(linkModal.locator('text=Registration Link Ready!')).toBeVisible();
+    await linkModal.getByRole('button', { name: 'Done' }).click();
+
+    // 2. Pending registrations section appears
+    await expect(page.locator('text=Pending Registrations (1)')).toBeVisible();
+    await expect(page.locator('text=Rohan Verma').first()).toBeVisible();
+    await expect(page.locator('text=Sunita Verma').first()).toBeVisible();
+
+    // 3. Approve button opens StudentFormModal prefilled
+    const approveBtn = page.getByRole('button', { name: 'Approve' }).filter({ visible: true }).first();
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
+
+    const studentModal = page.locator('div[role="dialog"], [aria-modal="true"]').first();
+    await expect(studentModal).toBeVisible();
+    await expect(studentModal.locator('h3', { hasText: 'Add New Student' })).toBeVisible();
+
+    // Verify prefilled values
+    await expect(studentModal.locator('input[name="fullName"]')).toHaveValue('Rohan Verma');
+    await expect(studentModal.locator('input[name="guardianName"]')).toHaveValue('Sunita Verma');
+
+    // Close modal
+    await studentModal.getByRole('button', { name: 'Close dialog' }).click();
+  });
 });

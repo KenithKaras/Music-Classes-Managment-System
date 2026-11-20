@@ -15,6 +15,7 @@ interface StudentFormModalProps {
   onClose: () => void;
   onSubmit: (formData: StudentFormData) => Promise<boolean>;
   student?: Student | null; // If provided, edit mode
+  initialValues?: Partial<StudentFormData>; // For prefilling when approving enrollment
 }
 
 export const StudentFormModal: React.FC<StudentFormModalProps> = ({
@@ -22,6 +23,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
   onClose,
   onSubmit,
   student,
+  initialValues,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -73,26 +75,26 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
       setErrors({});
       setPhotoError(null);
     } else {
-      // Add Mode: prefill default monthly fee from academy_settings
+      // Add Mode: prefill default monthly fee from academy_settings or initialValues
       getAcademySettings().then(({ settings }) => {
-        setMonthlyFee(settings?.default_monthly_fee ?? 1500);
+        setMonthlyFee(initialValues?.monthly_fee ?? settings?.default_monthly_fee ?? 1500);
       });
 
-      setFullName('');
-      setPhone('');
-      setEmail('');
-      setPhotoUrl(null);
-      setPhotoPreview(null);
-      setGuardianName('');
-      setGuardianPhone('');
-      setAddress('');
-      setEnrollmentDate(new Date().toISOString().split('T')[0]);
-      setBatchId('');
-      setStatus('active');
+      setFullName(initialValues?.full_name || '');
+      setPhone(initialValues?.phone || '');
+      setEmail(initialValues?.email || '');
+      setPhotoUrl(initialValues?.photo_url || null);
+      setPhotoPreview(initialValues?.photo_url || null);
+      setGuardianName(initialValues?.guardian_name || '');
+      setGuardianPhone(initialValues?.guardian_phone || '');
+      setAddress(initialValues?.address || '');
+      setEnrollmentDate(initialValues?.enrollment_date || new Date().toISOString().split('T')[0]);
+      setBatchId(initialValues?.batch_id || '');
+      setStatus(initialValues?.status || 'active');
       setErrors({});
       setPhotoError(null);
     }
-  }, [isOpen, student]);
+  }, [isOpen, student, initialValues]);
 
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

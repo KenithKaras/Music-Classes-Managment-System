@@ -11,18 +11,23 @@ import {
   ArrowRightLeft,
   User,
   Layers,
+  Send,
+  Camera,
 } from 'lucide-react';
 import { getStudents, createStudent, updateStudent, deleteStudent, transferStudentBatch } from '../services/studentService';
 import { getBatches } from '../services/batchService';
-import type { Student, StudentFormData, Batch } from '../types';
+import type { Student, StudentFormData, Batch, EnrollmentSubmission } from '../types';
+import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Select } from '../components/Select';
 import { Badge } from '../components/Badge';
 import { Table } from '../components/Table';
 import { EmptyState } from '../components/EmptyState';
+import { Modal } from '../components/Modal';
 import { StudentFormModal } from '../components/StudentFormModal';
 import { TransferBatchModal } from '../components/TransferBatchModal';
+import { EnrollmentLinkModal } from '../components/EnrollmentLinkModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Tabs } from '../components/Tabs';
 import { formatDisplayDate } from '../utils/formUtils';
@@ -54,10 +59,34 @@ export const StudentsPage: React.FC = () => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
+  // Enrollment (Feature B) state
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [pendingSubmissions, setPendingSubmissions] = useState<EnrollmentSubmission[]>([]);
+  const [approvingSubmission, setApprovingSubmission] = useState<EnrollmentSubmission | null>(null);
+  const [prefilledFormData, setPrefilledFormData] = useState<Partial<StudentFormData> | undefined>(undefined);
+  const [viewingPhotoUrl, setViewingPhotoUrl] = useState<string | null>(null);
+
   const [transferStudent, setTransferStudent] = useState<Student | null>(null);
 
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const loadSubmissions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('enrollment_submissions')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setPendingSubmissions(data as EnrollmentSubmission[]);
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.warn('Error loading enrollment submissions:', err);
+      }
+    }
+  };
 
   // Reset to first page when search or filters change
   useEffect(() => {
@@ -91,6 +120,8 @@ export const StudentsPage: React.FC = () => {
       setBatches(batchesRes.batches);
     }
 
+    await loadSubmissions();
+
     setLoading(false);
   };
 
@@ -123,6 +154,27 @@ export const StudentsPage: React.FC = () => {
         alert(`Failed to create student: ${res.error}`);
         return false;
       }
+
+      // If approving an enrollment submission, link it
+      if (approvingSubmission && res.student) {
+        try {
+          await supabase
+            .from('enrollment_submissions')
+            .update({
+              status: 'approved',
+              student_id: res.student.id,
+              reviewed_at: new Date().toISOString(),
+            })
+            .eq('id', approvingSubmission.id);
+        } catch (subErr) {
+          if (import.meta.env.DEV) {
+            console.warn('Could not link submission to student:', subErr);
+          }
+        }
+        setApprovingSubmission(null);
+        setPrefilledFormData(undefined);
+        await loadSubmissions();
+      }
     }
 
     setIsFormModalOpen(false);
@@ -130,6 +182,96 @@ export const StudentsPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['students'] });
     await loadData();
     return true;
+  };
+
+  const handleApproveSubmission = (sub: EnrollmentSubmission) => {
+    setApprovingSubmission(sub);
+    setEditingStudent(null);
+    const matchingBatch = batches.find(
+      (b) => b.name.toLowerCase() === sub.preferred_batch?.toLowerCase()
+    );
+    setPrefilledFormData({
+      full_name: sub.child_name,
+      guardian_name: sub.parent_name,
+      phone: sub.parent_phone,
+      guardian_phone: sub.parent_phone,
+      email: sub.parent_email || '',
+      address: sub.address || '',
+      batch_id: matchingBatch?.id || null,
+      enrollment_date: new Date().toISOString().split('T')[0],
+      photo_url: null,
+    });
+    setIsFormModalOpen(true);
+  };
+
+  const handleRejectSubmission = async (subId: string) => {
+    if (!confirm('Are you sure you want to reject this registration?')) return;
+    try {
+      const { error } = await supabase
+        .from('enrollment_submissions')
+        .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+        .eq('id', subId);
+      if (!error) {
+        await loadSubmissions();
+      } else {
+        alert('Failed to reject registration: ' + error.message);
+      }
+    } catch {
+      alert('Failed to reject registration.');
+    }
+  };
+
+  const handleDeleteSubmission = async (sub: EnrollmentSubmission) => {
+    if (!confirm(`Are you sure you want to delete registration for ${sub.child_name}?`)) return;
+    try {
+      if (sub.photo_path) {
+        await supabase.storage.from('enrollment-photos').remove([sub.photo_path]);
+      }
+      const { error } = await supabase
+        .from('enrollment_submissions')
+        .delete()
+        .eq('id', sub.id);
+      if (!error) {
+        await loadSubmissions();
+      } else {
+        alert('Failed to delete registration: ' + error.message);
+      }
+    } catch {
+      alert('Failed to delete registration.');
+    }
+  };
+
+  const handleRevokeSubmissionLink = async (linkId: string) => {
+    if (!confirm('Are you sure you want to revoke this registration link?')) return;
+    try {
+      const { error } = await supabase
+        .from('enrollment_links')
+        .update({ status: 'revoked' })
+        .eq('id', linkId);
+      if (!error) {
+        alert('Registration link revoked.');
+        await loadSubmissions();
+      } else {
+        alert('Failed to revoke link: ' + error.message);
+      }
+    } catch {
+      alert('Failed to revoke link.');
+    }
+  };
+
+  const handleViewPhoto = async (photoPath: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('enrollment-photos')
+        .createSignedUrl(photoPath, 60);
+      if (data?.signedUrl) {
+        setViewingPhotoUrl(data.signedUrl);
+      } else {
+        alert('Could not view photo: ' + (error?.message || 'Unknown error'));
+      }
+    } catch {
+      alert('Failed to view photo.');
+    }
   };
 
   // Delete student
@@ -186,8 +328,18 @@ export const StudentsPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Button
               type="button"
+              variant="outline"
+              onClick={() => setIsLinkModalOpen(true)}
+              icon={<Send className="w-4 h-4" />}
+            >
+              Send registration form
+            </Button>
+            <Button
+              type="button"
               variant="primary"
               onClick={() => {
+                setApprovingSubmission(null);
+                setPrefilledFormData(undefined);
                 setEditingStudent(null);
                 setIsFormModalOpen(true);
               }}
@@ -208,6 +360,119 @@ export const StudentsPage: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Pending Registrations Section (Feature B) */}
+      {pendingSubmissions.length > 0 && (
+        <div className="bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl p-4 sm:p-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-indigo-600 animate-pulse" />
+              <h3 className="text-sm sm:text-base font-semibold text-indigo-950 dark:text-indigo-200">
+                Pending Registrations ({pendingSubmissions.length})
+              </h3>
+            </div>
+            <span className="text-xs text-indigo-700 dark:text-indigo-400">
+              Parent-submitted registrations waiting for approval
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {pendingSubmissions.map((sub) => {
+              const receivedTime = new Date(sub.created_at).toLocaleString('en-IN', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              });
+              return (
+                <div
+                  key={sub.id}
+                  className="bg-white dark:bg-[#131c2e] p-4 rounded-xl border border-indigo-200 dark:border-indigo-900/50 flex flex-col justify-between gap-3 shadow-2xs"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                          {sub.child_name}
+                        </h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-300">
+                          Parent: {sub.parent_name} ({sub.parent_phone})
+                        </p>
+                      </div>
+                      <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 font-semibold px-2 py-0.5 rounded-full">
+                        Pending
+                      </span>
+                    </div>
+
+                    {sub.preferred_batch && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">Batch:</span>{' '}
+                        {sub.preferred_batch}
+                      </p>
+                    )}
+
+                    {sub.address && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">Address:</span>{' '}
+                        {sub.address}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 pt-1">
+                      <span>Received: {receivedTime}</span>
+                      <div className="flex items-center gap-2">
+                        {sub.photo_path && (
+                          <button
+                            type="button"
+                            onClick={() => handleViewPhoto(sub.photo_path!)}
+                            className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline flex items-center gap-1"
+                          >
+                            <Camera className="w-3 h-3" />
+                            Photo
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeSubmissionLink(sub.enrollment_link_id)}
+                          className="text-rose-500 hover:text-rose-700 hover:underline"
+                          title="Revoke the registration link used for this registration"
+                        >
+                          Revoke Link
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      className="flex-1 text-xs"
+                      onClick={() => handleApproveSubmission(sub)}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="text-xs"
+                      onClick={() => handleRejectSubmission(sub.id)}
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="text-xs text-rose-600 hover:text-rose-700"
+                      onClick={() => handleDeleteSubmission(sub)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Filters Bar */}
       <div className="bg-white dark:bg-[#131c2e] rounded-2xl border border-slate-200 dark:border-[#26324a] p-4 shadow-sm">
@@ -593,10 +858,50 @@ export const StudentsPage: React.FC = () => {
         onClose={() => {
           setIsFormModalOpen(false);
           setEditingStudent(null);
+          setApprovingSubmission(null);
+          setPrefilledFormData(undefined);
         }}
         onSubmit={handleFormSubmit}
         student={editingStudent}
+        initialValues={prefilledFormData}
       />
+
+      {/* Enrollment Link Modal (Feature B) */}
+      <EnrollmentLinkModal
+        isOpen={isLinkModalOpen}
+        onClose={() => setIsLinkModalOpen(false)}
+      />
+
+      {/* Photo Preview Modal (Feature B) */}
+      {viewingPhotoUrl && (
+        <Modal
+          isOpen={!!viewingPhotoUrl}
+          onClose={() => setViewingPhotoUrl(null)}
+          title="Student Photo"
+          description="60-second secure temporary preview from private storage"
+          maxWidth="sm"
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-center bg-slate-950 rounded-xl p-2">
+              <img
+                src={viewingPhotoUrl}
+                alt="Student Photo Preview"
+                className="max-h-[50vh] object-contain rounded-lg"
+              />
+            </div>
+            <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
+              <span>Expires in 60 seconds.</span>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setViewingPhotoUrl(null)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Transfer Batch Modal */}
       <TransferBatchModal

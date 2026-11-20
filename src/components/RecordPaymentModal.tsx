@@ -13,6 +13,7 @@ import {
   checkDuplicateUpiTxnId,
 } from '../services/paymentService';
 import { validateUpiTxnId } from '../utils/upiUtils';
+import { supabase } from '../lib/supabase';
 
 export interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -148,6 +149,27 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
         setErrorMessage(error || 'Failed to record payment');
         setIsSubmitting(false);
         return;
+      }
+
+      // Mark any pending screenshots for this fee as reviewed
+      try {
+        const { data: links } = await supabase
+          .from('payment_links')
+          .select('id')
+          .eq('monthly_fee_id', fee.id);
+        if (links && links.length > 0) {
+          const linkIds = links.map((l: { id: string }) => l.id);
+          await supabase
+            .from('payment_screenshots')
+            .update({ status: 'reviewed', reviewed_at: new Date().toISOString() })
+            .in('payment_link_id', linkIds)
+            .eq('status', 'pending');
+        }
+      } catch (markErr) {
+        // Non-blocking: fee payment was recorded successfully
+        if (import.meta.env.DEV) {
+          console.warn('Could not mark payment screenshot as reviewed:', markErr);
+        }
       }
 
       // Success
