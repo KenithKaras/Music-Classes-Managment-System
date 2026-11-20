@@ -680,6 +680,10 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     const presentBtn = page.getByRole('button', { name: 'Present', exact: true }).first();
     await presentBtn.click();
 
+    // Confirm step
+    const confirmBtn = page.getByRole('button', { name: 'Confirm', exact: true }).first();
+    await confirmBtn.click();
+
     // Verify "Saved" indicator appears
     const savedIndicator = page.locator('text=Saved').first();
     await expect(savedIndicator).toBeVisible();
@@ -696,9 +700,11 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
       await expect(studentName).toBeVisible({ timeout: 10000 });
     }
 
-    // Verify button is marked active (Present button has emerald background or ring)
-    const activePresentBtn = page.getByRole('button', { name: 'Present', exact: true }).first();
-    await expect(activePresentBtn).toHaveClass(/bg-emerald-600/);
+    // Verify student is still in confirmed Present state (shows Present badge and Edit button)
+    const presentBadge = page.locator('span', { hasText: 'Present' }).first();
+    await expect(presentBadge).toBeVisible();
+    const editBtn = page.getByRole('button', { name: 'Edit', exact: true }).first();
+    await expect(editBtn).toBeVisible();
   });
 
   // ----------------------------------------------------------------------------
@@ -2398,5 +2404,139 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     await page.goto('/dashboard');
     const appIcon = page.locator('aside img[src="/icons/icon-192x192.png"], header img[src="/icons/icon-192x192.png"]').filter({ visible: true });
     await expect(appIcon.first()).toBeVisible();
+  });
+
+  // ----------------------------------------------------------------------------
+  // 27. ATTENDANCE CONFIRMATION, LOCKED SAVED STATE, EDIT & RETRY FLOW
+  // ----------------------------------------------------------------------------
+  test('27. Attendance: confirm before saving, lock saved status, edit flow, failed save retry, mark all present (320px, 375px, desktop; light & dark)', async ({ page }, testInfo) => {
+    const isDesktop = testInfo.project.name.includes('Desktop');
+    const is320 = testInfo.project.name.includes('320');
+    const viewports = isDesktop
+      ? [{ width: 1280, height: 800, name: 'desktop' }]
+      : is320
+      ? [{ width: 320, height: 568, name: '320px' }]
+      : [{ width: 375, height: 667, name: '375px' }];
+
+    for (const theme of ['light', 'dark'] as const) {
+      for (const vp of viewports) {
+        await page.setViewportSize({ width: vp.width, height: vp.height });
+
+        const attendanceStore = { records: [] as Array<{ class_id: string; student_id: string; status: string }> };
+        await setupMockSessionAndRoutes(page, theme, attendanceStore);
+
+        await page.goto('/attendance');
+        await expect(page.locator('h1', { hasText: 'Attendance Management' })).toBeVisible();
+
+        // 1. Ensure Guitar Foundations class card and student roster is expanded
+        const classCard = page.locator('h3', { hasText: 'Guitar Foundations' }).first();
+        await expect(classCard).toBeVisible();
+        const studentName = page.locator('p', { hasText: 'Aarav Patel' }).first();
+        try {
+          await expect(studentName).toBeVisible({ timeout: 4000 });
+        } catch {
+          await classCard.click();
+          await expect(studentName).toBeVisible({ timeout: 8000 });
+        }
+
+        // Student row
+        const studentRow = page.locator('div.rounded-xl', { has: studentName }).first();
+
+        // 2. Initially unmarked: Present and Absent buttons visible, no Edit button
+        const presentBtn = studentRow.getByRole('button', { name: 'Present', exact: true });
+        const absentBtn = studentRow.getByRole('button', { name: 'Absent', exact: true });
+        await expect(presentBtn).toBeVisible();
+        await expect(absentBtn).toBeVisible();
+        await expect(studentRow.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
+
+        // 3. Tapping Present shows confirm bar and does NOT save
+        await presentBtn.click();
+        const confirmBarText = studentRow.locator('text=Mark Aarav Patel as Present?');
+        await expect(confirmBarText).toBeVisible();
+        const confirmBtn = studentRow.getByRole('button', { name: 'Confirm', exact: true });
+        const cancelBtn = studentRow.getByRole('button', { name: 'Cancel', exact: true });
+        await expect(confirmBtn).toBeVisible();
+        await expect(cancelBtn).toBeVisible();
+        expect(attendanceStore.records.length).toBe(0);
+
+        // Cancel test: tapping Cancel clears pending choice and restores original state
+        await cancelBtn.click();
+        await expect(confirmBarText).not.toBeVisible();
+        expect(attendanceStore.records.length).toBe(0);
+
+        // 4. Failed save shows retry message and keeps pending choice
+        await presentBtn.click();
+        await expect(confirmBarText).toBeVisible();
+
+        // Intercept POST /rest/v1/attendance to simulate failure
+        await page.route('**/rest/v1/attendance*', async (route) => {
+          if (route.request().method() === 'POST') {
+            await route.fulfill({
+              status: 500,
+              contentType: 'application/json',
+              body: JSON.stringify({ message: 'Database error simulation' }),
+            });
+            return;
+          }
+          await route.continue();
+        });
+
+        await confirmBtn.click();
+        const retryMsg = studentRow.locator('text=Could not save. Try again.');
+        await expect(retryMsg).toBeVisible();
+        // Pending choice and confirm bar are kept
+        await expect(confirmBarText).toBeVisible();
+        expect(attendanceStore.records.length).toBe(0);
+
+        // Unroute failure
+        await page.unroute('**/rest/v1/attendance*');
+
+        // 5. Confirm saves, row shows ONLY Present badge, and Edit is visible
+        await confirmBtn.click();
+        await expect(page.locator('text=Saved').first()).toBeVisible();
+        expect(attendanceStore.records.some((r) => r.status === 'present')).toBe(true);
+
+        // Row shows ONLY Present badge and Edit button; Present & Absent buttons are hidden
+        const presentBadge = studentRow.locator('span', { hasText: 'Present' }).first();
+        await expect(presentBadge).toBeVisible();
+        const editBtn = studentRow.getByRole('button', { name: 'Edit', exact: true });
+        await expect(editBtn).toBeVisible();
+        await expect(studentRow.getByRole('button', { name: 'Present', exact: true })).toHaveCount(0);
+        await expect(studentRow.getByRole('button', { name: 'Absent', exact: true })).toHaveCount(0);
+
+        // 6. Edit brings back Present and Absent, and Cancel returns to saved state
+        await editBtn.click();
+        await expect(studentRow.getByRole('button', { name: 'Present', exact: true })).toBeVisible();
+        await expect(studentRow.getByRole('button', { name: 'Absent', exact: true })).toBeVisible();
+        const cancelEditBtn = studentRow.getByRole('button', { name: 'Cancel', exact: true });
+        await expect(cancelEditBtn).toBeVisible();
+
+        // Cancel returns to saved state with no change
+        await cancelEditBtn.click();
+        await expect(studentRow.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
+        await expect(studentRow.getByRole('button', { name: 'Present', exact: true })).toHaveCount(0);
+
+        // 7. Mark all present asks for confirmation before saving
+        const markAllBtn = page.getByRole('button', { name: 'Mark all present' }).first();
+        if (await markAllBtn.isVisible()) {
+          await markAllBtn.click();
+          const markAllPrompt = page.locator('text=/Mark all \\d+ students as Present\\?/').first();
+          await expect(markAllPrompt).toBeVisible();
+
+          // Cancel mark all
+          const markAllContainer = page.locator('div', { has: markAllPrompt });
+          const cancelMarkAllBtn = markAllContainer.getByRole('button', { name: 'Cancel', exact: true });
+          await cancelMarkAllBtn.click();
+          await expect(markAllPrompt).not.toBeVisible();
+
+          // Confirm mark all
+          await markAllBtn.click();
+          await expect(markAllPrompt).toBeVisible();
+          const confirmMarkAllBtn = markAllContainer.getByRole('button', { name: 'Confirm', exact: true });
+          await confirmMarkAllBtn.click();
+          await expect(page.locator('text=Saved').first()).toBeVisible();
+        }
+      }
+    }
   });
 });

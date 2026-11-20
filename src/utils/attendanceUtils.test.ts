@@ -7,6 +7,8 @@ import {
   formatTimeAmPm,
   getDayOfWeek,
   getWeekDates,
+  getAttendanceRowState,
+  formatMarkedTime,
 } from './attendanceUtils';
 
 describe('calculateAttendancePercentage', () => {
@@ -135,5 +137,70 @@ describe('getDayOfWeek and getWeekDates', () => {
     expect(week.dates.length).toBe(7);
     expect(week.dates[0].dayOfWeek).toBe('Mon');
     expect(week.dates[6].dayOfWeek).toBe('Sun');
+  });
+});
+
+describe('getAttendanceRowState (pure function for attendance row states)', () => {
+  it('returns "unmarked" when there is no saved status, no pending choice, and not editing', () => {
+    expect(getAttendanceRowState({ savedStatus: null, pendingStatus: null, isEditing: false })).toBe('unmarked');
+    expect(getAttendanceRowState(null, null, false)).toBe('unmarked');
+  });
+
+  it('returns "pending" when a status is chosen regardless of previous state', () => {
+    // Pending choice for unmarked student
+    expect(getAttendanceRowState({ savedStatus: null, pendingStatus: 'present', isEditing: false })).toBe('pending');
+    expect(getAttendanceRowState({ savedStatus: null, pendingStatus: 'absent', isEditing: false })).toBe('pending');
+
+    // Pending choice while editing a previously saved row
+    expect(getAttendanceRowState({ savedStatus: 'present', pendingStatus: 'absent', isEditing: true })).toBe('pending');
+    expect(getAttendanceRowState({ savedStatus: 'absent', pendingStatus: 'present', isEditing: true })).toBe('pending');
+
+    // Positional arguments
+    expect(getAttendanceRowState('present', 'absent', true)).toBe('pending');
+  });
+
+  it('returns "saved" when status is saved, no pending choice, and not editing', () => {
+    expect(getAttendanceRowState({ savedStatus: 'present', pendingStatus: null, isEditing: false })).toBe('saved');
+    expect(getAttendanceRowState({ savedStatus: 'absent', pendingStatus: null, isEditing: false })).toBe('saved');
+    expect(getAttendanceRowState('present', null, false)).toBe('saved');
+  });
+
+  it('returns "editing" when student has a saved status, isEditing is true, and no pending choice', () => {
+    expect(getAttendanceRowState({ savedStatus: 'present', pendingStatus: null, isEditing: true })).toBe('editing');
+    expect(getAttendanceRowState({ savedStatus: 'absent', pendingStatus: null, isEditing: true })).toBe('editing');
+    expect(getAttendanceRowState('present', null, true)).toBe('editing');
+  });
+
+  it('returns "unmarked" if isEditing is true but savedStatus is null and no pending choice', () => {
+    expect(getAttendanceRowState({ savedStatus: null, pendingStatus: null, isEditing: true })).toBe('unmarked');
+  });
+
+  it('restores "saved" state when editing is cancelled (isEditing set back to false)', () => {
+    expect(getAttendanceRowState({ savedStatus: 'present', pendingStatus: null, isEditing: false })).toBe('saved');
+  });
+
+  it('restores original state when pending choice is cancelled', () => {
+    // If was unmarked
+    expect(getAttendanceRowState({ savedStatus: null, pendingStatus: null, isEditing: false })).toBe('unmarked');
+    // If was editing
+    expect(getAttendanceRowState({ savedStatus: 'present', pendingStatus: null, isEditing: true })).toBe('editing');
+  });
+});
+
+describe('formatMarkedTime', () => {
+  it('formats ISO timestamps to AM/PM format', () => {
+    const timeStr = formatMarkedTime('2026-11-20T10:15:00.000Z');
+    expect(timeStr).toMatch(/\d{1,2}:\d{2}\s+(AM|PM)/);
+  });
+
+  it('formats standard 24-hr time strings', () => {
+    expect(formatMarkedTime('14:30:00')).toBe('2:30 PM');
+    expect(formatMarkedTime('09:15')).toBe('9:15 AM');
+  });
+
+  it('returns empty string for null or empty input', () => {
+    expect(formatMarkedTime(null)).toBe('');
+    expect(formatMarkedTime('')).toBe('');
+    expect(formatMarkedTime(undefined)).toBe('');
   });
 });

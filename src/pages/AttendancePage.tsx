@@ -43,6 +43,8 @@ import { EmptyState } from '../components/EmptyState';
 import {
   formatDateYmd,
   getAttendanceStatusBadge,
+  getAttendanceRowState,
+  formatMarkedTime,
 } from '../utils/attendanceUtils';
 import { formatDisplayDate, formatDisplayTime } from '../utils/formUtils';
 
@@ -61,6 +63,14 @@ export const AttendancePage: React.FC = () => {
   const [classRosters, setClassRosters] = useState<Record<string, StudentAttendanceDraft[]>>({});
   const [loadingRoster, setLoadingRoster] = useState<string | null>(null);
   const [savedIndicator, setSavedIndicator] = useState<string | null>(null);
+
+  // Attendance Confirmation & Edit states
+  const [pendingChoices, setPendingChoices] = useState<Record<string, AttendanceStatus>>({});
+  const [savingStudents, setSavingStudents] = useState<Record<string, boolean>>({});
+  const [saveErrors, setSaveErrors] = useState<Record<string, string>>({});
+  const [editingStudents, setEditingStudents] = useState<Record<string, boolean>>({});
+  const [confirmMarkAllClassId, setConfirmMarkAllClassId] = useState<string | null>(null);
+  const [isSavingMarkAll, setIsSavingMarkAll] = useState<string | null>(null);
 
   // Needs Attention state
   const [needsAttentionList, setNeedsAttentionList] = useState<ConsecutiveAbsenceStudent[]>([]);
@@ -159,52 +169,163 @@ export const AttendancePage: React.FC = () => {
     setSelectedDate(formatDateYmd(d));
   };
 
-  // Auto-Save Attendance on Tap
-  const handleAttendanceTap = async (
-    classId: string,
-    studentId: string,
-    targetStatus: AttendanceStatus
-  ) => {
-    if (isFutureDate) return; // Future dates cannot be marked
+  // 1. Select status (sets pending choice, does not save yet)
+  const handleSelectStatus = (classId: string, studentId: string, status: AttendanceStatus) => {
+    if (isFutureDate) return;
+    const cls = dateClasses.find((c) => c.id === classId);
+    if (cls?.status === 'cancelled') return;
 
-    const currentRoster = classRosters[classId] || [];
-    const currentStudent = currentRoster.find((d) => d.student.id === studentId);
-    const currentStatus = currentStudent?.status || null;
+    setPendingChoices((prev) => ({ ...prev, [studentId]: status }));
+    setSaveErrors((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+  };
 
-    // Tapping the selected button clears it
-    const newStatus: AttendanceStatus | null = currentStatus === targetStatus ? null : targetStatus;
+  // 2. Cancel pending choice (clears pending choice, restores original state)
+  const handleCancelPending = (studentId: string) => {
+    setPendingChoices((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+    setSaveErrors((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+  };
 
-    // Optimistically update UI
-    setClassRosters((prev) => ({
-      ...prev,
-      [classId]: (prev[classId] || []).map((d) =>
-        d.student.id === studentId ? { ...d, status: newStatus } : d
-      ),
-    }));
+  // 3. Confirm status choice (saves using existing save logic)
+  const handleConfirmAttendance = async (classId: string, studentId: string) => {
+    if (isFutureDate) return;
+    const cls = dateClasses.find((c) => c.id === classId);
+    if (cls?.status === 'cancelled') return;
 
-    // Trigger auto-save
-    const res = await updateStudentAttendance(classId, studentId, newStatus);
-    if (!res.error) {
+    const targetStatus = pendingChoices[studentId];
+    if (!targetStatus) return;
+
+    setSavingStudents((prev) => ({ ...prev, [studentId]: true }));
+    setSaveErrors((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+
+    const res = await updateStudentAttendance(classId, studentId, targetStatus);
+    setSavingStudents((prev) => ({ ...prev, [studentId]: false }));
+
+    if (res.error) {
+      // Keep pending choice so teacher can retry
+      setSaveErrors((prev) => ({ ...prev, [studentId]: 'Could not save. Try again.' }));
+    } else {
+      const nowIso = new Date().toISOString();
+      setClassRosters((prev) => ({
+        ...prev,
+        [classId]: (prev[classId] || []).map((d) =>
+          d.student.id === studentId
+            ? { ...d, status: targetStatus, marked_at: nowIso, updated_at: nowIso }
+            : d
+        ),
+      }));
+
+      setPendingChoices((prev) => {
+        const next = { ...prev };
+        delete next[studentId];
+        return next;
+      });
+      setEditingStudents((prev) => {
+        const next = { ...prev };
+        delete next[studentId];
+        return next;
+      });
+      setSaveErrors((prev) => {
+        const next = { ...prev };
+        delete next[studentId];
+        return next;
+      });
+
       setSavedIndicator(classId);
       setTimeout(() => setSavedIndicator(null), 2000);
     }
   };
 
-  // Mark all present
-  const handleMarkAllPresent = async (classId: string) => {
+  // 4. Edit mode toggle
+  const handleStartEdit = (studentId: string) => {
+    setEditingStudents((prev) => ({ ...prev, [studentId]: true }));
+    setPendingChoices((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+    setSaveErrors((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+  };
+
+  const handleCancelEdit = (studentId: string) => {
+    setEditingStudents((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+    setPendingChoices((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+    setSaveErrors((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+  };
+
+  // 5. Mark all present handlers
+  const handleStartMarkAllPresent = (classId: string) => {
     if (isFutureDate) return;
+    const cls = dateClasses.find((c) => c.id === classId);
+    if (cls?.status === 'cancelled') return;
+    setConfirmMarkAllClassId(classId);
+  };
+
+  const handleCancelMarkAllPresent = () => {
+    setConfirmMarkAllClassId(null);
+  };
+
+  const handleConfirmMarkAllPresent = async (classId: string) => {
+    if (isFutureDate) return;
+    const cls = dateClasses.find((c) => c.id === classId);
+    if (cls?.status === 'cancelled') return;
 
     const currentRoster = classRosters[classId] || [];
-    const studentIds = currentRoster.map((d) => d.student.id);
+    // Only unmarked students! Students already marked are not changed.
+    const unmarkedStudents = currentRoster.filter((d) => d.status === null);
+    const studentIdsToMark = unmarkedStudents.map((d) => d.student.id);
 
-    // Optimistically update UI
-    setClassRosters((prev) => ({
-      ...prev,
-      [classId]: (prev[classId] || []).map((d) => ({ ...d, status: 'present' })),
-    }));
+    if (studentIdsToMark.length === 0) {
+      setConfirmMarkAllClassId(null);
+      return;
+    }
 
-    const res = await markAllStudentsPresent(classId, studentIds);
+    setIsSavingMarkAll(classId);
+    const res = await markAllStudentsPresent(classId, studentIdsToMark);
+    setIsSavingMarkAll(null);
+
     if (!res.error) {
+      const nowIso = new Date().toISOString();
+      setClassRosters((prev) => ({
+        ...prev,
+        [classId]: (prev[classId] || []).map((d) =>
+          studentIdsToMark.includes(d.student.id)
+            ? { ...d, status: 'present', marked_at: nowIso, updated_at: nowIso }
+            : d
+        ),
+      }));
+      setConfirmMarkAllClassId(null);
       setSavedIndicator(classId);
       setTimeout(() => setSavedIndicator(null), 2000);
     }
@@ -544,15 +665,42 @@ export const AttendancePage: React.FC = () => {
                                 )}
 
                                 {!isFutureDate && (
-                                  <Button
-                                    type="button"
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => handleMarkAllPresent(cls.id)}
-                                    className="min-h-[44px]"
-                                  >
-                                    Mark all present
-                                  </Button>
+                                  confirmMarkAllClassId === cls.id ? (
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto bg-indigo-50 dark:bg-indigo-950/40 p-2 rounded-xl border border-indigo-200 dark:border-indigo-900/50">
+                                      <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200 px-1">
+                                        Mark all {unmarkedCount} students as Present?
+                                      </span>
+                                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                                        <button
+                                          type="button"
+                                          disabled={isSavingMarkAll === cls.id}
+                                          onClick={() => handleConfirmMarkAllPresent(cls.id)}
+                                          className="flex-1 sm:flex-initial min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center transition-colors shadow-xs"
+                                        >
+                                          {isSavingMarkAll === cls.id ? 'Saving...' : 'Confirm'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={isSavingMarkAll === cls.id}
+                                          onClick={handleCancelMarkAllPresent}
+                                          className="flex-1 sm:flex-initial min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-[#131c2e] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center transition-colors"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      size="sm"
+                                      disabled={unmarkedCount === 0}
+                                      onClick={() => handleStartMarkAllPresent(cls.id)}
+                                      className="min-h-[44px]"
+                                    >
+                                      Mark all present
+                                    </Button>
+                                  )
                                 )}
                               </div>
                             </div>
@@ -561,66 +709,177 @@ export const AttendancePage: React.FC = () => {
                             <div className="space-y-2">
                               {roster.map((draft) => {
                                 const st = draft.student;
-                                const isPresent = draft.status === 'present';
-                                const isAbsent = draft.status === 'absent';
+                                const pendingStatus = pendingChoices[st.id] || null;
+                                const isEditing = Boolean(editingStudents[st.id]);
+                                const isSaving = Boolean(savingStudents[st.id]);
+                                const saveError = saveErrors[st.id] || null;
+
+                                const rowState = getAttendanceRowState({
+                                  savedStatus: draft.status,
+                                  pendingStatus,
+                                  isEditing,
+                                });
+
+                                const markedTime = formatMarkedTime(draft.marked_at || draft.updated_at);
 
                                 return (
                                   <div
                                     key={st.id}
-                                    className="p-3 rounded-xl bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                                    className="p-3 rounded-xl bg-white dark:bg-[#131c2e] border border-slate-200 dark:border-[#26324a] flex flex-col gap-3 shadow-2xs"
                                   >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-                                        {st.photo_url ? (
-                                          <img
-                                            src={st.photo_url}
-                                            alt={st.full_name}
-                                            className="w-full h-full object-cover"
-                                          />
-                                        ) : (
-                                          <User className="w-5 h-5 text-slate-400" />
-                                        )}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+                                          {st.photo_url ? (
+                                            <img
+                                              src={st.photo_url}
+                                              alt={st.full_name}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          ) : (
+                                            <User className="w-5 h-5 text-slate-400" />
+                                          )}
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate">
+                                            {st.full_name}
+                                          </p>
+                                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                            Enrolled: {formatDisplayDate(st.enrollment_date)}
+                                          </p>
+                                        </div>
                                       </div>
-                                      <div className="min-w-0">
-                                        <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate">
-                                          {st.full_name}
-                                        </p>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                          Enrolled: {formatDisplayDate(st.enrollment_date)}
-                                        </p>
-                                      </div>
+
+                                      {/* Actions / Status */}
+                                      {rowState === 'saved' ? (
+                                        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 w-full sm:w-auto">
+                                          <div className="flex items-center gap-2">
+                                            <span
+                                              className={`px-3 py-1.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 ${
+                                                draft.status === 'present'
+                                                  ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60'
+                                                  : 'bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60'
+                                              }`}
+                                            >
+                                              {draft.status === 'present' ? (
+                                                <>
+                                                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                                  <span>Present</span>
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <X className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                                                  <span>Absent</span>
+                                                </>
+                                              )}
+                                            </span>
+                                            {markedTime && (
+                                              <span className="text-xs text-slate-500 dark:text-slate-400 font-mono whitespace-nowrap">
+                                                {markedTime}
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          {!isFutureDate && (
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => handleStartEdit(st.id)}
+                                              className="min-h-[44px] min-w-[54px]"
+                                            >
+                                              Edit
+                                            </Button>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        /* rowState === 'unmarked' || 'editing' || 'pending' */
+                                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0 w-full sm:w-auto">
+                                          <button
+                                            type="button"
+                                            disabled={isFutureDate || isSaving}
+                                            onClick={() => handleSelectStatus(cls.id, st.id, 'present')}
+                                            className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-bold text-xs min-h-[44px] min-w-[44px] sm:min-w-[90px] flex items-center justify-center gap-1.5 transition-all ${
+                                              (pendingStatus === 'present' || (!pendingStatus && draft.status === 'present'))
+                                                ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-500/40'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600'
+                                            } ${isFutureDate ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                          >
+                                            <Check className="w-4 h-4" />
+                                            <span>Present</span>
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            disabled={isFutureDate || isSaving}
+                                            onClick={() => handleSelectStatus(cls.id, st.id, 'absent')}
+                                            className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-bold text-xs min-h-[44px] min-w-[44px] sm:min-w-[90px] flex items-center justify-center gap-1.5 transition-all ${
+                                              (pendingStatus === 'absent' || (!pendingStatus && draft.status === 'absent'))
+                                                ? 'bg-rose-600 text-white shadow-xs ring-2 ring-rose-500/40'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600'
+                                            } ${isFutureDate ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                          >
+                                            <X className="w-4 h-4" />
+                                            <span>Absent</span>
+                                          </button>
+
+                                          {rowState === 'editing' && !pendingStatus && (
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => handleCancelEdit(st.id)}
+                                              className="min-h-[44px]"
+                                            >
+                                              Cancel
+                                            </Button>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
 
-                                    {/* Present and Absent Buttons (min 44x44px touch targets) */}
-                                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0 w-full sm:w-auto">
-                                      <button
-                                        type="button"
-                                        disabled={isFutureDate}
-                                        onClick={() => handleAttendanceTap(cls.id, st.id, 'present')}
-                                        className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-bold text-xs min-h-[44px] min-w-[44px] sm:min-w-[90px] flex items-center justify-center gap-1.5 transition-all ${
-                                          isPresent
-                                            ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-500/40'
-                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600'
-                                        } ${isFutureDate ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                      >
-                                        <Check className="w-4 h-4" />
-                                        <span>Present</span>
-                                      </button>
+                                    {/* Confirm Bar when status is pending */}
+                                    {rowState === 'pending' && pendingStatus && (
+                                      <div className="mt-1 pt-3 border-t border-slate-100 dark:border-[#26324a] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 dark:bg-[#1a2540]/60 -mx-3 -mb-3 p-3 rounded-b-xl">
+                                        <div className="space-y-1">
+                                          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                                            Mark {st.full_name} as {pendingStatus === 'present' ? 'Present' : 'Absent'}?
+                                          </p>
+                                          {saveError && (
+                                            <p className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                                              {saveError}
+                                            </p>
+                                          )}
+                                        </div>
 
-                                      <button
-                                        type="button"
-                                        disabled={isFutureDate}
-                                        onClick={() => handleAttendanceTap(cls.id, st.id, 'absent')}
-                                        className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-bold text-xs min-h-[44px] min-w-[44px] sm:min-w-[90px] flex items-center justify-center gap-1.5 transition-all ${
-                                          isAbsent
-                                            ? 'bg-rose-600 text-white shadow-xs ring-2 ring-rose-500/40'
-                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600'
-                                        } ${isFutureDate ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                      >
-                                        <X className="w-4 h-4" />
-                                        <span>Absent</span>
-                                      </button>
-                                    </div>
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
+                                          <button
+                                            type="button"
+                                            disabled={isSaving}
+                                            onClick={() => handleConfirmAttendance(cls.id, st.id)}
+                                            className="w-full sm:w-auto min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                                          >
+                                            {isSaving ? (
+                                              <>
+                                                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                <span>Saving...</span>
+                                              </>
+                                            ) : (
+                                              <span>Confirm</span>
+                                            )}
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            disabled={isSaving}
+                                            onClick={() => handleCancelPending(st.id)}
+                                            className="w-full sm:w-auto min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold bg-white dark:bg-[#131c2e] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center transition-colors"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })}

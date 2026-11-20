@@ -1,4 +1,65 @@
-import type { DayOfWeek } from '../types';
+import type { DayOfWeek, AttendanceStatus } from '../types';
+
+export type AttendanceRowState = 'unmarked' | 'pending' | 'saved' | 'editing';
+
+export interface AttendanceRowStateInputs {
+  savedStatus: AttendanceStatus | null;
+  pendingStatus: AttendanceStatus | null;
+  isEditing?: boolean;
+}
+
+/**
+ * Pure function to determine a student's row state in the attendance roster.
+ * Possible states: 'unmarked' | 'pending' | 'saved' | 'editing'
+ */
+export function getAttendanceRowState(
+  inputsOrSavedStatus: AttendanceRowStateInputs | (AttendanceStatus | null),
+  pendingStatus?: AttendanceStatus | null,
+  isEditing?: boolean
+): AttendanceRowState {
+  let saved: AttendanceStatus | null = null;
+  let pending: AttendanceStatus | null = null;
+  let editing = false;
+
+  if (typeof inputsOrSavedStatus === 'object' && inputsOrSavedStatus !== null) {
+    saved = inputsOrSavedStatus.savedStatus;
+    pending = inputsOrSavedStatus.pendingStatus;
+    editing = Boolean(inputsOrSavedStatus.isEditing);
+  } else {
+    saved = inputsOrSavedStatus;
+    pending = pendingStatus ?? null;
+    editing = Boolean(isEditing);
+  }
+
+  if (pending !== null) {
+    return 'pending';
+  }
+  if (editing && saved !== null) {
+    return 'editing';
+  }
+  if (saved !== null) {
+    return 'saved';
+  }
+  return 'unmarked';
+}
+
+/**
+ * Formats marked_at or updated_at timestamp into 12-hour AM/PM format (e.g. "10:15 AM").
+ */
+export function formatMarkedTime(timestamp?: string | null): string {
+  if (!timestamp) return '';
+  if (timestamp.includes('T') || timestamp.includes('-') || timestamp.includes(' ')) {
+    const d = new Date(timestamp);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+    }
+  }
+  return formatTimeAmPm(timestamp);
+}
 
 /**
  * Calculates attendance percentage rounded to 1 decimal place.

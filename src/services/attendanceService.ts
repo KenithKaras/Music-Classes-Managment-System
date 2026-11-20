@@ -174,6 +174,8 @@ export async function getClassAttendanceRecords(
 export interface StudentAttendanceDraft {
   student: Student;
   status: AttendanceStatus | null; // null if unmarked
+  marked_at?: string | null;
+  updated_at?: string | null;
 }
 
 /**
@@ -252,18 +254,30 @@ export async function getStudentsForClassAttendance(
     // 3. Fetch existing attendance for this class
     const { data: existingAttendance } = await supabase
       .from('attendance')
-      .select('student_id, status')
+      .select('student_id, status, marked_at, updated_at')
       .eq('class_id', classId);
 
-    const existingMap = new Map<string, AttendanceStatus>();
+    const existingMap = new Map<
+      string,
+      { status: AttendanceStatus; marked_at: string | null; updated_at: string | null }
+    >();
     for (const att of existingAttendance || []) {
-      existingMap.set(att.student_id, att.status as AttendanceStatus);
+      existingMap.set(att.student_id, {
+        status: att.status as AttendanceStatus,
+        marked_at: att.marked_at || null,
+        updated_at: att.updated_at || null,
+      });
     }
 
-    const merged: StudentAttendanceDraft[] = (studentsData || []).map((student) => ({
-      student: student as Student,
-      status: existingMap.get(student.id) || null,
-    }));
+    const merged: StudentAttendanceDraft[] = (studentsData || []).map((student) => {
+      const existing = existingMap.get(student.id);
+      return {
+        student: student as Student,
+        status: existing ? existing.status : null,
+        marked_at: existing ? existing.marked_at : null,
+        updated_at: existing ? existing.updated_at : null,
+      };
+    });
 
     return {
       students: merged,
