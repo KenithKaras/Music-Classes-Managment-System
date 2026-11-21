@@ -2341,6 +2341,7 @@ test.describe('MIX with Me Classes — Complete Verification Suite', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     const isDark = await page.evaluate(() => document.documentElement.classList.contains('dark'));
     expect(isDark).toBe(false);
+    await expect(page.locator('text=Made by Kenith Karas')).toBeVisible();
 
     // 2. Public /pay page displays "Made by Kenith Karas"
     await page.goto('/pay?token=invalid_test_token', { waitUntil: 'domcontentloaded' });

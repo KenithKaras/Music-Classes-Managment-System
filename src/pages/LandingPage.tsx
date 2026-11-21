@@ -501,7 +501,10 @@ export const LandingPage: React.FC = () => {
             </div>
             <span className="font-bold text-slate-900 dark:text-[#f1f5f9]">MIX with Me Classes</span>
           </Link>
-          <p>&copy; {new Date().getFullYear()} MIX with Me Classes. All rights reserved.</p>
+          <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+            <p>&copy; {new Date().getFullYear()} MIX with Me Classes. All rights reserved.</p>
+            <p className="text-xs text-slate-400 dark:text-[#a9b4c7] mt-1">Made by Kenith Karas</p>
+          </div>
           <div className="flex gap-4">
             <a href="#features" className="hover:underline">Modules</a>
             <a href="#timetable" className="hover:underline">Timetable</a>
